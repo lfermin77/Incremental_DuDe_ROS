@@ -1,0 +1,145 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{206E32F4-62D7-45DA-9DCC-0683785C2926}</ProjectGuid>
+    <RootNamespace>dude2d</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>..;../GL/lib;../src;../mathtool;../FIST;../src/skeleton;../src/graph;../src/draw;../pslib/include;$(CGAL_DIR)\auxiliary\gmp\include;$(CGAL_DIR)\include;$(BOOST_INCLUDEDIR);</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(CGAL_DIR)\lib;$(CGAL_DIR)\auxiliary\gmp\lib;$(BOOST_LIBRARYDIR);../FIST;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>FIST.lib;libgmp-10.lib;Winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>..;../GL/lib;../src;../mathtool;../FIST;../src/skeleton;../src/graph;../src/draw;../pslib/include;$(CGAL_DIR)\auxiliary\gmp\include;$(CGAL_DIR)\include;$(BOOST_INCLUDEDIR);</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(CGAL_DIR)\lib;$(CGAL_DIR)\auxiliary\gmp\lib;$(BOOST_LIBRARYDIR);../FIST;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>FIST.lib;libgmp-10.lib;Winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\mathtool\Basic.cpp" />
+    <ClCompile Include="..\mathtool\Quaternion.cpp" />
+    <ClCompile Include="..\src\bpc.cpp" />
+    <ClCompile Include="..\src\cdt2.cpp" />
+    <ClCompile Include="..\src\chull.cpp" />
+    <ClCompile Include="..\src\cutset.cpp" />
+    <ClCompile Include="..\src\diagonal2.cpp" />
+    <ClCompile Include="..\src\dp_approx.cpp" />
+    <ClCompile Include="..\src\dude.cpp" />
+    <ClCompile Include="..\src\dude_cut.cpp" />
+    <ClCompile Include="..\src\dude_use.cpp" />
+    <ClCompile Include="..\src\holecutconcavity.cpp" />
+    <ClCompile Include="..\src\holediag.cpp" />
+    <ClCompile Include="..\src\knapsack.cpp" />
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\polygon.cpp" />
+    <ClCompile Include="..\src\polyline.cpp" />
+    <ClCompile Include="..\src\poly_approx.cpp" />
+    <ClCompile Include="..\src\skeleton\SE2d.cpp" />
+    <ClCompile Include="..\src\skeleton\SE2d_decomp.cpp" />
+    <ClCompile Include="..\src\skeleton\SE2d_skeleton.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\mathtool\Basic.h" />
+    <ClInclude Include="..\mathtool\DualQuaternion.h" />
+    <ClInclude Include="..\mathtool\Matrix.h" />
+    <ClInclude Include="..\mathtool\Point.h" />
+    <ClInclude Include="..\mathtool\Quaternion.h" />
+    <ClInclude Include="..\mathtool\Vector.h" />
+    <ClInclude Include="..\src\bpc.h" />
+    <ClInclude Include="..\src\cdt2.h" />
+    <ClInclude Include="..\src\chull.h" />
+    <ClInclude Include="..\src\compile_option.h" />
+    <ClInclude Include="..\src\cutset.h" />
+    <ClInclude Include="..\src\diagonal2.h" />
+    <ClInclude Include="..\src\dp_approx.h" />
+    <ClInclude Include="..\src\draw\draw_decoration.h" />
+    <ClInclude Include="..\src\draw\draw_option.h" />
+    <ClInclude Include="..\src\dude.h" />
+    <ClInclude Include="..\src\dude_cut.h" />
+    <ClInclude Include="..\src\dude_param.h" />
+    <ClInclude Include="..\src\dude_use.h" />
+    <ClInclude Include="..\src\dude_util.h" />
+    <ClInclude Include="..\src\eigen.h" />
+    <ClInclude Include="..\src\gettime.h" />
+    <ClInclude Include="..\src\Graph.h" />
+    <ClInclude Include="..\src\graph\BaseGraph.h" />
+    <ClInclude Include="..\src\graph\BasicDefns.h" />
+    <ClInclude Include="..\src\graph\Defines.h" />
+    <ClInclude Include="..\src\graph\Graph.h" />
+    <ClInclude Include="..\src\graph\GraphAlgo.h" />
+    <ClInclude Include="..\src\holecutconcavity.h" />
+    <ClInclude Include="..\src\holediag.h" />
+    <ClInclude Include="..\src\intersection.h" />
+    <ClInclude Include="..\src\knapsack.h" />
+    <ClInclude Include="..\src\main.h" />
+    <ClInclude Include="..\src\polygon.h" />
+    <ClInclude Include="..\src\polyline.h" />
+    <ClInclude Include="..\src\poly_approx.h" />
+    <ClInclude Include="..\src\simple_svg_1.0.0.h" />
+    <ClInclude Include="..\src\skeleton\SE2d.h" />
+    <ClInclude Include="..\src\skeleton\SE2d_data.h" />
+    <ClInclude Include="..\src\skeleton\SE2d_decomp.h" />
+    <ClInclude Include="..\src\skeleton\SE2d_eigen.h" />
+    <ClInclude Include="..\src\skeleton\SE2d_skeleton.h" />
+    <ClInclude Include="..\src\skeleton\SE2d_util.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

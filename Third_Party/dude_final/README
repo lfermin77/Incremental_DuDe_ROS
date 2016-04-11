@@ -1,0 +1,69 @@
+
+Liu, Guilin, Zhonghua Xi, and Jyh-Ming Lien. "Dual-Space Decomposition of 2D Complex Shapes." Computer Vision and Pattern Recognition (CVPR), 2014 IEEE Conference on. IEEE, 2014.
+
+
+1. usage:
+
+Usage: ./dude2d [options] P.poly -svg
+options:
+
+-g              disable openGL visualization
+-o file         dump decompoisition to file
+-ske            build skeleton after decomposition
+-ps             saves to ps file
+-pske           save skeleton ps file
+-pp             saves polygon pieces to ps file
+-j              convert to json file
+-k [value]      create k-number of decomposition
+-tau [value]    tolerable concavity
+-com [file.txt] to compare the segmenation with a segmentation from file
+-ite            decompse once
+-polys          export decomposed polygons into files
+-svg            render decomposed polygons into svg files
+
+Two examples in folder examples/. The .svg file can be viewed using browser.
+ 
+ ./dude2d examples/bike.poly -svg
+ ./dude2d examples/airplant.poly -svg
+
+some sample polygon data can be found in http://masc.cs.gmu.edu/wiki/Software#dude2d
+
+
+2. compile
+
+  2.1 dependency
+  required:  CGAL
+  optional: OpenGL
+
+  2.2 compiling options
+  The default of OpenGL rendering has been turned off.
+  
+  compiling options: in compile_option.h, the OpenGL and pslib can be turned on using the following setting:
+   
+   #define GL_RENDERING 1 //openGL rendering
+   #define PS_RENDERING 1 //postscript rendering
+
+  2.3 linux
+  The code has been compiled on Linux and OSX. To compile code, go the home direction which contains Makefile, Makefile_nogl.
+
+   a. when OpenGL is not installed and compiling option has been turned off:
+   make
+
+   b. when OpenGL is installed and compiling option has been turned on:
+   make -f Makefile_gl
+
+  2.4 windows
+  A visual studio 2013 solution file has been included. You may need to project settings(include, lib) accordingly for the cases including OpenGL/not including OpenGL.
+
+
+
+3. to cite, please use the following bib text.
+
+@inproceedings{liu2014dual,
+  title={Dual-Space Decomposition of 2D Complex Shapes},
+  author={Liu, Guilin and Xi, Zhonghua and Lien, Jyh-Ming},
+  booktitle={Computer Vision and Pattern Recognition (CVPR), 2014 IEEE Conference on},
+  pages={4154--4161},
+  year={2014},
+  organization={IEEE}
+}
