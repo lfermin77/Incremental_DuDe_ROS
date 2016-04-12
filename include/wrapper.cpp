@@ -55,7 +55,7 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 		}
 	}
 	double end_finding = getTime();  cout << "done, it last "<<(end_finding-start_finding)<< " ms"  << endl;			
-		
+	Parent_contour = Explored_contour [Big_Contour_Index ];
 /////////////////////////////
 //// Insert contours in Dual-Space Decomposer 
 	std::cout << "Inserting contours ....... "; double start_inserting = getTime();
@@ -295,34 +295,63 @@ void DuDe_OpenCV_wrapper::print_graph(){
 
 ///////////////////////////
 void DuDe_OpenCV_wrapper::measure_performance(){
-	vector<float> convexities, compactness, qualities;
+	vector<float> convexities, compactness, qualities, areas;
+	float Total_Area=0;
+	float Total_Quality=0;
 
 	// Calculate Quality
 		// Region Quality
 			// Convexity with area/area_convex_hull (c_i)
-			// Compactness second moment (s_i)
+			// Compactness second moment (s_i) =(1/(Mi*Ai))* \sum(((xi-x0)^2 + (yi-y0)^2 )/(Ai))
 			//  q_i = c_i -s_i
 	
 	for (int i=0; i < Decomposed_contours.size(); i++){
-		float Area = cv::contourArea(Decomposed_contours[i]);
+
+		cv::Moments moments = cv::moments(Decomposed_contours[i], true);
 		vector<cv::Point> hull;
 		
 		convexHull( Decomposed_contours[i], hull );	
-		float Area_Hull = cv::contourArea(hull);
-		convexities.push_back( Area/Area_Hull);
-		cout << "convexity "<< convexities.back() << endl;	
-		
-		cv::Moments moments = cv::moments(Decomposed_contours[i], true);	
-	}
-	
-	
+		float A_i=moments.m00;
+		float H_i = cv::contourArea(hull);
+		float c_i = A_i/H_i;
+		convexities.push_back( c_i);
+		areas.push_back( A_i);
+		float M_i=A_i;// currently the number of cells is the number of pixels
 
+		float s_i = moments.mu20 + moments.mu02;
+		s_i = (1/(M_i*A_i))*(s_i/A_i);
+		compactness.push_back(s_i);
+		
+//		cout << "convexity "<< convexities.back() <<", area " << areas.back() << ", compactness "<< s_i<<endl;	
+		float q_i = c_i - s_i;
+		qualities.push_back(q_i);
+		cout << "quality " << q_i << endl;
+		
+		Total_Area+=A_i;
+		Total_Quality+=q_i;
+	}
 		// Quality of segmentation
 			//Area Coverage Ratio Area/Area post segmented (C)
 			//Validity Ratio: regions with A>A_min and edge_size>edge_size_min (R)
-			//Simplicity exp(-(N-Ñ)/\Phi). N= current number of nodes; Ñ: expected number of regions
+			//Simplicity exp(-(N-Ñ)/\Phi). N= current number of nodes; Ñ: expected number of regions	
+	
+	float Parent_Area = cv::contourArea(Parent_contour);
+	float Area_Coverage_Ratio =(Total_Area/Parent_Area);//Regularly 1
+	float Validity_Ratio = 1;//All areas are valid
+	float Simplicity=1; // regions coincide with user defined
+	
+	cout << "Area_Coverage_Ratio " << Area_Coverage_Ratio << endl;
+	
+	float Overall_Quality;
+	float lambda=1; //equally weighted
+
+	Overall_Quality = (Area_Coverage_Ratio * Validity_Ratio)/(contours_centroid.size())*Total_Quality + lambda*Simplicity;
+
+	cout <<"C "<<Area_Coverage_Ratio<<" R "<<Validity_Ratio<<" N "<<contours_centroid.size()<<" S "<<Simplicity<<" Q "<<Total_Quality<<endl;
+	cout << "Overall_Quality " << Overall_Quality << endl;
+
 	// Overall Quality
-		// CR/N \sum( q_i  + \lambda exp(-(N-Ñ)/\Phi     )            ) with \lambda = forro's theorem
+		// CR/N \sum( q_i) +  \lambda exp( -(N-Ñ)/\Phi )   with \lambda 
 	
 }
 

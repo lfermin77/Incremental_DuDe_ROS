@@ -39,6 +39,7 @@ public:
 
 	vector<c_polygon*> finalPolygonPieces; //the result polygons, they can be exported as individual files	
 
+	std::vector<cv::Point> Parent_contour;
 	
 //	Nodes
 	std::vector<std::vector<cv::Point> > Decomposed_contours;
