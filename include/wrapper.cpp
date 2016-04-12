@@ -291,3 +291,40 @@ void DuDe_OpenCV_wrapper::print_graph(){
 	}
 	std::cout << std::endl;
 }
+
+
+///////////////////////////
+void DuDe_OpenCV_wrapper::measure_performance(){
+	vector<float> convexities, compactness, qualities;
+
+	// Calculate Quality
+		// Region Quality
+			// Convexity with area/area_convex_hull (c_i)
+			// Compactness second moment (s_i)
+			//  q_i = c_i -s_i
+	
+	for (int i=0; i < Decomposed_contours.size(); i++){
+		float Area = cv::contourArea(Decomposed_contours[i]);
+		vector<cv::Point> hull;
+		
+		convexHull( Decomposed_contours[i], hull );	
+		float Area_Hull = cv::contourArea(hull);
+		convexities.push_back( Area/Area_Hull);
+		cout << "convexity "<< convexities.back() << endl;	
+		
+		cv::Moments moments = cv::moments(Decomposed_contours[i], true);	
+	}
+	
+	
+
+		// Quality of segmentation
+			//Area Coverage Ratio Area/Area post segmented (C)
+			//Validity Ratio: regions with A>A_min and edge_size>edge_size_min (R)
+			//Simplicity exp(-(N-Ñ)/\Phi). N= current number of nodes; Ñ: expected number of regions
+	// Overall Quality
+		// CR/N \sum( q_i  + \lambda exp(-(N-Ñ)/\Phi     )            ) with \lambda = forro's theorem
+	
+}
+
+
+//

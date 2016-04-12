@@ -117,7 +117,8 @@ class ROS_handler
 
 	// Occupancy Grid to Image
 			//std::cout << "Occ_to_Image..... "; 		double start_occ2im = getTime();
-			cv::Mat Occ_Image = cv::Mat::zeros(map->info.width, map->info.height, CV_8UC1);			
+			cv::Mat Occ_Image = cv::Mat::zeros(map->info.height, map->info.width, CV_8UC1);	
+
 			for(unsigned int y = 0; y < map->info.height; y++) {
 				for(unsigned int x = 0; x < map->info.width; x++) {
 					unsigned int i = x + (map->info.height - y - 1) * map->info.width;
@@ -134,23 +135,28 @@ class ROS_handler
 				}
 			}
 
+
 			//std::cout << "Occ_to_Image..... "; 		double start_occ2im = getTime();
 			cv::Mat img(map->info.width, map->info.height, CV_8U);
 			img.data = (unsigned char *)(&(map->data[0]) );
 			cv::flip(img,img,0);
 			//double end_occ2im = getTime();  cout << "done, it last "<<(end_occ2im-start_occ2im)<< " ms"  << endl;		
-				
+
 	//////////////////////////////////////////////////////////
+			cv::flip(Occ_Image,Occ_Image,0);
 			cv::Rect resize_rect = wrapp.Decomposer(Occ_Image);
+
+			wrapp.measure_performance();
 	/////////////////////////////////////////////////////////		
 	//  Graph Search
 			insert_DuDe_Graph(wrapp, Graph_searcher);
 			cv::Mat Colored_Frontier = extract_frontier(Occ_Image, wrapp, Graph_searcher);
-
-			int start = find_current_convex(wrapp);
+			
+			int start =0;
+			//start = find_current_convex(wrapp);
 			Graph_searcher.starting_node_= start;                              /////
 			Graph_searcher.Graph_Node_List_[start].distance_from_start_ = 0;  //////			
-			
+
 			Graph_searcher.dijkstra_min_dist();
 			if (Graph_searcher.frontier_connected_.size()>0){
 //				Graph_searcher.print_graph_attributes();				 Graph_searcher.print_frontier_attributes();		//		Graph_searcher.print_frontier_connected();	
@@ -166,22 +172,28 @@ class ROS_handler
 			else{
 				std::cout<<"All your Nodes are belong to us "<< std::endl;
 			}
-			
+			//*/
 			
 	////////////
 	//Draw Image
-			cv::Mat Drawing = cv::Mat::zeros(Occ_Image.size().width, Occ_Image.size().height, CV_8UC1);	
+			cv::Mat Drawing = cv::Mat::zeros(Occ_Image.size().height, Occ_Image.size().width, CV_8UC1);	
+			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
+				drawContours(Drawing, wrapp.Decomposed_contours, i, i+1, -1, 8);
+			}	
+			cv::flip(Drawing,Drawing,0);
 			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
-				drawContours(Drawing, wrapp.Decomposed_contours, i, i+1, -1, 8);
-				putText(Drawing, text, wrapp.contours_centroid[i], cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp.contours_centroid.size()+1, 1, 8);
+				putText(Drawing, text, cv::Point(wrapp.contours_centroid[i].x, Occ_Image.size().height - wrapp.contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp.contours_centroid.size()+1, 1, 8);
 			}	
-
+			
 	////////////////////////
 			cv::Mat croppedRef(Drawing, resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
+
 			grad = croppedImage;
+
+//			grad = Occ_Image;
 
 	//////////////////////
 	/////PUBLISH
@@ -189,7 +201,7 @@ class ROS_handler
 			grad.convertTo(grad, CV_32F);
 			grad.copyTo(cv_ptr->image);////most important
 			
-			publish_Contour();
+//			publish_Contour();
 	//////////
 	/////Time
 			clock_t end = clock();
@@ -326,7 +338,7 @@ class ROS_handler
 		////////////////////////////////
 		//// Find Contours in Frontiers
 			cv::Mat Frontiers;
-			cv::Mat Drawing = cv::Mat::zeros(Occ_Image.size().width, Occ_Image.size().height, CV_8UC1);	
+			cv::Mat Drawing = cv::Mat::zeros(Occ_Image.size().height, Occ_Image.size().width, CV_8UC1);	
 			for(int i = 0; i <wrapp.contours_centroid.size();i++){
 				drawContours(Drawing, wrapp.Decomposed_contours, i, i+1, -1, 8);
 			}						
