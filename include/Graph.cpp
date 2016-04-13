@@ -175,7 +175,11 @@ void Graph_Search::frontiers_minima(){
 
 	}
 		
-	std::cout<<"The frontier that should be explored is "<< frontier_connected_[index_expected]<<" expecting connect to "<<  connected_to[index_expected] <<" in "<<Frontier_Node_List_[  connected_to[index_expected]  ].Node_Position_<<std::endl;				
+	std::cout<<"The frontier that should be explored is "<< frontier_connected_[index_expected]<<" in node "<<	Frontier_Node_List_[frontier_connected_[index_expected]].connections_[0]
+	<<" expecting connect it to frontier "<<  connected_to[index_expected] <<" in node "<<  Frontier_Node_List_[connected_to[index_expected]].connections_[0] <<std::endl;				
+	
+//	Frontier_Node_List_[frontier_connected_[index_expected]].print_atributes();
+//	Frontier_Node_List_[connected_to[index_expected]].print_atributes();
 
 	std::vector<int>::iterator it;
 	std::vector<cv::Point>::iterator it_position;
