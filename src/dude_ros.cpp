@@ -187,10 +187,10 @@ class ROS_handler
 			}	
 			
 	////////////////////////
+			resize_rect.y=Occ_Image.size().height - (resize_rect.y + resize_rect.height);// because of the flipping images
 			cv::Mat croppedRef(Drawing, resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
-
 			grad = croppedImage;
 
 //			grad = Occ_Image;
