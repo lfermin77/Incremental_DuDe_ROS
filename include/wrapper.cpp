@@ -29,7 +29,7 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 			cout << "Entering........ ";
 	cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			
 	cout << "dilated........ ";
-	cv::medianBlur(Occ_Image>210, Median_Image, 2);
+	cv::medianBlur(Occ_Image>210, Median_Image, 3);
 	cout << "Median Blur........ ";
 	Image_in = Median_Image & ~black_image;
 	cout << "And........ ";
