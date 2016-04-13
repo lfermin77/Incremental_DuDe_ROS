@@ -26,11 +26,15 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 	cv::Mat black_image = Occ_Image<10;	
 	cv::Mat Median_Image, Image_in, cut_image ;
 	{
+			cout << "Entering........ ";
 	cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			
-	cv::medianBlur(Occ_Image>210, Median_Image, 3);
-	
+	cout << "dilated........ ";
+	cv::medianBlur(Occ_Image>210, Median_Image, 2);
+	cout << "Median Blur........ ";
 	Image_in = Median_Image & ~black_image;
+	cout << "And........ ";
 	Image_in.copyTo(cut_image);			
+	cout << "copy........ ";
 	}
 	double end_cleaning = getTime();  cout << "done, it last "<<(end_cleaning-start_cleaning)<< " ms"  << endl;			
 
@@ -347,7 +351,7 @@ void DuDe_OpenCV_wrapper::measure_performance(){
 
 	Overall_Quality = (Area_Coverage_Ratio * Validity_Ratio)/(contours_centroid.size())*Total_Quality + lambda*Simplicity;
 
-	cout <<"C "<<Area_Coverage_Ratio<<" R "<<Validity_Ratio<<" N "<<contours_centroid.size()<<" S "<<Simplicity<<" Q "<<Total_Quality<<endl;
+	cout <<"C "<<Area_Coverage_Ratio<<" R "<<Validity_Ratio<<" N "<<contours_centroid.size()<<" S "<<Simplicity<<" Q_avg "<<Total_Quality/contours_centroid.size()<<endl;
 	cout << "Overall_Quality " << Overall_Quality << endl;
 
 	// Overall Quality
