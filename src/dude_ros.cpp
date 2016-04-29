@@ -128,8 +128,23 @@ class ROS_handler
 	//////////////////////////////////////////////////////////
 //			cv::flip(Occ_Image,Occ_Image,0);
 			cv::Rect resize_rect = wrapp.Decomposer(Occ_image);
-
 			wrapp.measure_performance();
+	////////////////////////////////////////////////////
+			DuDe_OpenCV_wrapper convex_edge;
+			pixel_Tau = 1 / Map_Info_.resolution; // 1 meter default
+			convex_edge.set_pixel_Tau(pixel_Tau);
+			
+			cv::Mat Unknow_Area = Occ_image == 255; // Tag for unknown
+			cv::Rect Conve_rect(cv::Point(resize_rect.x - pixel_Tau, resize_rect.y - pixel_Tau), 
+			                        cv::Point(resize_rect.br().x + pixel_Tau, resize_rect.br().y + pixel_Tau));
+
+			
+			
+			
+			
+			
+			
+			
 	/////////////////////////////////////////////////////////		
 	//  Graph Search
 			insert_DuDe_Graph(wrapp, Graph_searcher);
