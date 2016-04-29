@@ -132,16 +132,19 @@ class ROS_handler
 	////////////////////////////////////////////////////
 			DuDe_OpenCV_wrapper convex_edge;
 			pixel_Tau = 1 / Map_Info_.resolution; // 1 meter default
-			convex_edge.set_pixel_Tau(pixel_Tau);
-			
-			cv::Mat Unknow_Area = Occ_image == 255; // Tag for unknown
-			cv::Rect Conve_rect(cv::Point(resize_rect.x - pixel_Tau, resize_rect.y - pixel_Tau), 
-			                        cv::Point(resize_rect.br().x + pixel_Tau, resize_rect.br().y + pixel_Tau));
+			convex_edge.set_pixel_Tau(pixel_Tau);			
 
+
+			cv::Rect Convex_rect(cv::Point(resize_rect.x - pixel_Tau, resize_rect.y - pixel_Tau), 
+			                        cv::Point(resize_rect.br().x + pixel_Tau, resize_rect.br().y + pixel_Tau));
+			resize_rect=Convex_rect;
 			
+			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
+			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
+			drawContours(Complement_Image, wrapp.Decomposed_contours, -1, 0, -1, 8);			
 			
-			
-			
+			convex_edge.Decomposer(~Complement_Image);
 			
 			
 			
@@ -175,13 +178,19 @@ class ROS_handler
 	////////////
 	//Draw Image
 			cv::Mat Drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
-			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
-				drawContours(Drawing, wrapp.Decomposed_contours, i, i+1, -1, 8);
+			
+			DuDe_OpenCV_wrapper *wrapp_ptr;
+			wrapp_ptr= &convex_edge;
+//			wrapp_ptr= &wrapp;
+
+			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
+			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
+				drawContours(Drawing, wrapp_ptr->Decomposed_contours, i, i+1, -1, 8);
 			}	
 			cv::flip(Drawing,Drawing,0);
-			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
+			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
-				putText(Drawing, text, cv::Point(wrapp.contours_centroid[i].x, Occ_image.size().height - wrapp.contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp.contours_centroid.size()+1, 1, 8);
+				putText(Drawing, text, cv::Point(wrapp_ptr->contours_centroid[i].x, Occ_image.size().height - wrapp_ptr->contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp_ptr->contours_centroid.size()+1, 1, 8);
 			}	
 			
 	////////////////////////
@@ -189,7 +198,10 @@ class ROS_handler
 			cv::Mat croppedRef(Drawing, resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
+			
+
 			grad = croppedImage;
+//			grad = Drawing;
 
 //			grad = Occ_Image;
 
