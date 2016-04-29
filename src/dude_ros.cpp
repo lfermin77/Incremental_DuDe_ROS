@@ -116,41 +116,20 @@ class ROS_handler
 			cv_ptr->header = map->header;
 
 	// Occupancy Grid to Image
-			//std::cout << "Occ_to_Image..... "; 		double start_occ2im = getTime();
-			cv::Mat Occ_Image = cv::Mat::zeros(map->info.height, map->info.width, CV_8UC1);	
-
-			for(unsigned int y = 0; y < map->info.height; y++) {
-				for(unsigned int x = 0; x < map->info.width; x++) {
-					unsigned int i = x + (map->info.height - y - 1) * map->info.width;
-					if (map->data[i] == 0) { //occ [0,0.1)
-						Occ_Image.at<char>(y,x)=255;
-				//		fputc(254, out);
-					} else if (map->data[i] == +100) { //occ (0.65,1]
-				//		fputc(000, out);
-						Occ_Image.at<char>(y,x)=0;
-					} else { //occ [0.1,0.65]
-				//		fputc(205, out);
-						Occ_Image.at<char>(y,x)=205;
-					}
-				}
-			}
-
-
-			//std::cout << "Occ_to_Image..... "; 		double start_occ2im = getTime();
-			cv::Mat img(map->info.width, map->info.height, CV_8U);
-			img.data = (unsigned char *)(&(map->data[0]) );
-			cv::flip(img,img,0);
-			//double end_occ2im = getTime();  cout << "done, it last "<<(end_occ2im-start_occ2im)<< " ms"  << endl;		
+			cv::Mat Occ_image(map->info.width, map->info.height, CV_8U);
+			Occ_image.data = (unsigned char *)(&(map->data[0]) );
+			
+//			cv::flip(Occ_image,Occ_image,0);
 
 	//////////////////////////////////////////////////////////
-			cv::flip(Occ_Image,Occ_Image,0);
-			cv::Rect resize_rect = wrapp.Decomposer(Occ_Image);
+//			cv::flip(Occ_Image,Occ_Image,0);
+			cv::Rect resize_rect = wrapp.Decomposer(Occ_image);
 
 			wrapp.measure_performance();
 	/////////////////////////////////////////////////////////		
 	//  Graph Search
 			insert_DuDe_Graph(wrapp, Graph_searcher);
-			cv::Mat Colored_Frontier = extract_frontier(Occ_Image, wrapp, Graph_searcher);
+			cv::Mat Colored_Frontier = extract_frontier(Occ_image, wrapp, Graph_searcher);
 			
 			int start =0;
 			//start = find_current_convex(wrapp);
@@ -176,18 +155,18 @@ class ROS_handler
 			
 	////////////
 	//Draw Image
-			cv::Mat Drawing = cv::Mat::zeros(Occ_Image.size().height, Occ_Image.size().width, CV_8UC1);	
+			cv::Mat Drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
 				drawContours(Drawing, wrapp.Decomposed_contours, i, i+1, -1, 8);
 			}	
 			cv::flip(Drawing,Drawing,0);
 			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
-				putText(Drawing, text, cv::Point(wrapp.contours_centroid[i].x, Occ_Image.size().height - wrapp.contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp.contours_centroid.size()+1, 1, 8);
+				putText(Drawing, text, cv::Point(wrapp.contours_centroid[i].x, Occ_image.size().height - wrapp.contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp.contours_centroid.size()+1, 1, 8);
 			}	
 			
 	////////////////////////
-			resize_rect.y=Occ_Image.size().height - (resize_rect.y + resize_rect.height);// because of the flipping images
+			resize_rect.y=Occ_image.size().height - (resize_rect.y + resize_rect.height);// because of the flipping images
 			cv::Mat croppedRef(Drawing, resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
@@ -319,13 +298,15 @@ class ROS_handler
 		cv::Mat extract_frontier(cv::Mat Occ_Image, DuDe_OpenCV_wrapper  &wrapp, Graph_Search &Graph_searcher){
 			//Occupancy Image to Free Space	
 			std::cout << "Extracting Frontier..... ";
-			cv::Mat thresholded_image = Occ_Image>210;
-		
-			cv::Mat black_image = Occ_Image<10;	
+//			cv::Mat thresholded_image = Occ_Image>210;
+			
+			cv::Mat open_space = Occ_Image<10;
+			cv::Mat black_image = Occ_Image>90 & Occ_Image<=100;		
+
 			cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
 				
 			cv::Mat Median_Image;
-			cv::medianBlur(Occ_Image>210, Median_Image, 3);
+			cv::medianBlur(open_space, Median_Image, 3);
 			cv::Mat Image_in = Median_Image & ~black_image;
 			 
 			cv::dilate(Median_Image, Median_Image, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );

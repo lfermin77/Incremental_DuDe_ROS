@@ -22,19 +22,19 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 ///////////////////////////////	
 //Occupancy Image to Free Space	
 	std::cout << "Cleaning Image..... "; 		double start_cleaning = getTime();
-	cv::Mat thresholded_image = Occ_Image>210;
-	cv::Mat black_image = Occ_Image<10;	
+	cv::Mat open_space = Occ_Image<10;
+	cv::Mat black_image = Occ_Image>90 & Occ_Image<=100;		
 	cv::Mat Median_Image, Image_in, cut_image ;
 	{
-			cout << "Entering........ ";
-	cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			
-	cout << "dilated........ ";
-	cv::medianBlur(Occ_Image>210, Median_Image, 3);
-	cout << "Median Blur........ ";
-	Image_in = Median_Image & ~black_image;
-	cout << "And........ ";
-	Image_in.copyTo(cut_image);			
-	cout << "copy........ ";
+		cout << "Entering........ ";
+		cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			
+		cout << "dilated........ ";
+		cv::medianBlur(open_space, Median_Image, 3);
+		cout << "Median Blur........ ";
+		Image_in = Median_Image & ~black_image;
+		cout << "And........ ";
+		Image_in.copyTo(cut_image);			
+		cout << "copy........ ";
 	}
 	double end_cleaning = getTime();  cout << "done, it last "<<(end_cleaning-start_cleaning)<< " ms"  << endl;			
 
