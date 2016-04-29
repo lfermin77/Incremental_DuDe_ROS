@@ -88,7 +88,13 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 	//		cout << "Polygons size " << polygons.size() << endl;
 	cout << "- Dual-space Decomposition with tau=" << g_tau << endl;
 	float r = polygons.front().getRadius();
-	g_tau*=r;// Scale the concavity variable
+
+	if(tolerance_in_pixels){
+		 g_tau = g_tau_pixel;
+	 }
+	 else{
+		 g_tau*=r;// Scale the concavity variable if tau is fractional
+	 }
 	double start_dude = getTime();
 	///////////////
 	Dual_decompose(polygons);

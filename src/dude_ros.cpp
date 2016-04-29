@@ -101,11 +101,15 @@ class ROS_handler
 			
 			cv::Mat grad;
 			DuDe_OpenCV_wrapper wrapp;
-			wrapp.set_Tau(Decomp_threshold_);
+//			wrapp.set_Tau(Decomp_threshold_);
+			float pixel_Tau = Decomp_threshold_ / Map_Info_.resolution;
+			wrapp.set_pixel_Tau(pixel_Tau);
+			
 			Graph_Search Graph_searcher;
 			
 			Map_Info_ = map-> info;						
 			std::cout <<"Map_Info_.resolution  " << Map_Info_.resolution << std::endl;
+			std::cout <<"Pixel_Tau  " << pixel_Tau << std::endl;
 
 			clock_t begin = clock();
 			ROS_INFO("Received a %d X %d map @ %.3f m/pix",
@@ -462,7 +466,7 @@ int main(int argc, char **argv)
   
   std::string mapname = "map";
   
-  float decomp_th=0.1;
+  float decomp_th=3;
   if (argc ==2){ decomp_th = atof(argv[1]); }
 
 
