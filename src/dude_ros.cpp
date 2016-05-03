@@ -50,6 +50,8 @@ class ROS_handler
 	std::vector <cv::Point> path_;
 	cv::Point position_cm_;
 	float distance;
+
+	float safety_distance;
 	
 	int threshold_;	
 	std::vector<std::vector<cv::Point> > contour_vector;
@@ -79,6 +81,8 @@ class ROS_handler
 			
 			position_cm_ = cv::Point(0,0); 
 			distance=0;
+			safety_distance = 1;
+			
 		}
 
 		~ROS_handler()
@@ -120,32 +124,40 @@ class ROS_handler
 			cv_ptr->header = map->header;
 
 	// Occupancy Grid to Image
-			cv::Mat Occ_image(map->info.width, map->info.height, CV_8U);
-			Occ_image.data = (unsigned char *)(&(map->data[0]) );
-			
-//			cv::flip(Occ_image,Occ_image,0);
+			cv::Mat img(map->info.height, map->info.width, CV_8U);
+			img.data = (unsigned char *)(&(map->data[0]) );
+
+			int gap = safety_distance / Map_Info_.resolution;
+
+			cv::Rect Enbigger_Rect(gap, gap, img.cols, img.rows);			
+
+			cv::Mat Occ_image(map->info.height + 2*gap, map->info.width + 2*gap, CV_8U,255);
+			cv::Rect Occ_Rect(0, 0, Occ_image.cols, Occ_image.rows);
+			img.copyTo(Occ_image(Enbigger_Rect));
+
 
 	//////////////////////////////////////////////////////////
-//			cv::flip(Occ_Image,Occ_Image,0);
+	//// Decomposition
 			cv::Rect resize_rect = wrapp.Decomposer(Occ_image);
 			wrapp.measure_performance();
-	////////////////////////////////////////////////////
-			DuDe_OpenCV_wrapper convex_edge;
-			pixel_Tau = 1 / Map_Info_.resolution; // 1 meter default
-			convex_edge.set_pixel_Tau(pixel_Tau);			
 
+	////////////////////////////////////////////////////
+	///// External Decomposition
+			DuDe_OpenCV_wrapper convex_edge;
+			pixel_Tau = safety_distance / Map_Info_.resolution; 
+			convex_edge.set_pixel_Tau(pixel_Tau);			
 
 			cv::Rect Convex_rect(cv::Point(resize_rect.x - pixel_Tau, resize_rect.y - pixel_Tau), 
 			                        cv::Point(resize_rect.br().x + pixel_Tau, resize_rect.br().y + pixel_Tau));
-			resize_rect=Convex_rect;
-			
+
+   			resize_rect=Convex_rect & Occ_Rect;
+
 			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
 			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
 			drawContours(Complement_Image, wrapp.Decomposed_contours, -1, 0, -1, 8);			
 			
 			convex_edge.Decomposer(~Complement_Image);
-			
 			
 			
 	/////////////////////////////////////////////////////////		
@@ -180,8 +192,9 @@ class ROS_handler
 			cv::Mat Drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			
 			DuDe_OpenCV_wrapper *wrapp_ptr;
-			wrapp_ptr= &convex_edge;
-//			wrapp_ptr= &wrapp;
+
+//			wrapp_ptr= &convex_edge;
+			wrapp_ptr= &wrapp;
 
 			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
 			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
@@ -194,7 +207,11 @@ class ROS_handler
 			}	
 			
 	////////////////////////
+//			cv::Mat croppedRef(Occ_image, resize_rect);			
 			resize_rect.y=Occ_image.size().height - (resize_rect.y + resize_rect.height);// because of the flipping images
+			resize_rect = resize_rect & Occ_Rect;
+			
+
 			cv::Mat croppedRef(Drawing, resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
@@ -203,7 +220,7 @@ class ROS_handler
 			grad = croppedImage;
 //			grad = Drawing;
 
-//			grad = Occ_Image;
+//			grad = Occ_image;
 
 	//////////////////////
 	/////PUBLISH
