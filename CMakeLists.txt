@@ -154,7 +154,7 @@ include(${CGAL_USE_FILE})
 # )
 
 ######## dude_ros
-add_executable(inc_dude src/dude_ros.cpp include/Graph.cpp include/wrapper.cpp)
+add_executable(inc_dude src/inc_dude.cpp include/Graph.cpp include/wrapper.cpp)
 
 target_link_libraries(inc_dude
    ${catkin_LIBRARIES}
