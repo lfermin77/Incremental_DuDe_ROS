@@ -50,6 +50,8 @@ class ROS_handler
 	std::vector <cv::Point> path_;
 	cv::Point position_cm_;
 	float distance;
+
+	float safety_distance;
 	
 	int threshold_;	
 	std::vector<std::vector<cv::Point> > contour_vector;
@@ -79,6 +81,8 @@ class ROS_handler
 			
 			position_cm_ = cv::Point(0,0); 
 			distance=0;
+			safety_distance = 1;
+			
 		}
 
 		~ROS_handler()
@@ -101,11 +105,15 @@ class ROS_handler
 			
 			cv::Mat grad;
 			DuDe_OpenCV_wrapper wrapp;
-			wrapp.set_Tau(Decomp_threshold_);
+//			wrapp.set_Tau(Decomp_threshold_);
+			float pixel_Tau = Decomp_threshold_ / Map_Info_.resolution;
+			wrapp.set_pixel_Tau(pixel_Tau);
+			
 			Graph_Search Graph_searcher;
 			
 			Map_Info_ = map-> info;						
 			std::cout <<"Map_Info_.resolution  " << Map_Info_.resolution << std::endl;
+			std::cout <<"Pixel_Tau  " << pixel_Tau << std::endl;
 
 			clock_t begin = clock();
 			ROS_INFO("Received a %d X %d map @ %.3f m/pix",
@@ -116,41 +124,46 @@ class ROS_handler
 			cv_ptr->header = map->header;
 
 	// Occupancy Grid to Image
-			//std::cout << "Occ_to_Image..... "; 		double start_occ2im = getTime();
-			cv::Mat Occ_Image = cv::Mat::zeros(map->info.height, map->info.width, CV_8UC1);	
-
-			for(unsigned int y = 0; y < map->info.height; y++) {
-				for(unsigned int x = 0; x < map->info.width; x++) {
-					unsigned int i = x + (map->info.height - y - 1) * map->info.width;
-					if (map->data[i] == 0) { //occ [0,0.1)
-						Occ_Image.at<char>(y,x)=255;
-				//		fputc(254, out);
-					} else if (map->data[i] == +100) { //occ (0.65,1]
-				//		fputc(000, out);
-						Occ_Image.at<char>(y,x)=0;
-					} else { //occ [0.1,0.65]
-				//		fputc(205, out);
-						Occ_Image.at<char>(y,x)=205;
-					}
-				}
-			}
-
-
-			//std::cout << "Occ_to_Image..... "; 		double start_occ2im = getTime();
-			cv::Mat img(map->info.width, map->info.height, CV_8U);
+			cv::Mat img(map->info.height, map->info.width, CV_8U);
 			img.data = (unsigned char *)(&(map->data[0]) );
-			cv::flip(img,img,0);
-			//double end_occ2im = getTime();  cout << "done, it last "<<(end_occ2im-start_occ2im)<< " ms"  << endl;		
+
+			int gap = safety_distance / Map_Info_.resolution;
+
+			cv::Rect Enbigger_Rect(gap, gap, img.cols, img.rows);			
+
+			cv::Mat Occ_image(map->info.height + 2*gap, map->info.width + 2*gap, CV_8U,255);
+			cv::Rect Occ_Rect(0, 0, Occ_image.cols, Occ_image.rows);
+			img.copyTo(Occ_image(Enbigger_Rect));
+
 
 	//////////////////////////////////////////////////////////
-			cv::flip(Occ_Image,Occ_Image,0);
-			cv::Rect resize_rect = wrapp.Decomposer(Occ_Image);
-
+	//// Decomposition
+			cv::Rect resize_rect = wrapp.Decomposer(Occ_image);
 			wrapp.measure_performance();
+
+	////////////////////////////////////////////////////
+	///// External Decomposition
+			DuDe_OpenCV_wrapper convex_edge;
+			pixel_Tau = safety_distance / Map_Info_.resolution; 
+			convex_edge.set_pixel_Tau(pixel_Tau);			
+
+			cv::Rect Convex_rect(cv::Point(resize_rect.x - pixel_Tau, resize_rect.y - pixel_Tau), 
+			                        cv::Point(resize_rect.br().x + pixel_Tau, resize_rect.br().y + pixel_Tau));
+
+   			resize_rect=Convex_rect & Occ_Rect;
+
+			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
+			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
+			drawContours(Complement_Image, wrapp.Decomposed_contours, -1, 0, -1, 8);			
+			
+			convex_edge.Decomposer(~Complement_Image);
+			
+			
 	/////////////////////////////////////////////////////////		
 	//  Graph Search
 			insert_DuDe_Graph(wrapp, Graph_searcher);
-			cv::Mat Colored_Frontier = extract_frontier(Occ_Image, wrapp, Graph_searcher);
+			cv::Mat Colored_Frontier = extract_frontier(Occ_image, wrapp, Graph_searcher);
 			
 			int start =0;
 			//start = find_current_convex(wrapp);
@@ -176,24 +189,38 @@ class ROS_handler
 			
 	////////////
 	//Draw Image
-			cv::Mat Drawing = cv::Mat::zeros(Occ_Image.size().height, Occ_Image.size().width, CV_8UC1);	
-			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
-				drawContours(Drawing, wrapp.Decomposed_contours, i, i+1, -1, 8);
+			cv::Mat Drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
+			
+			DuDe_OpenCV_wrapper *wrapp_ptr;
+
+//			wrapp_ptr= &convex_edge;
+			wrapp_ptr= &wrapp;
+
+			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
+			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
+				drawContours(Drawing, wrapp_ptr->Decomposed_contours, i, i+1, -1, 8);
 			}	
 			cv::flip(Drawing,Drawing,0);
-			for(int i = 0; i <wrapp.Decomposed_contours.size();i++){
+			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
-				putText(Drawing, text, cv::Point(wrapp.contours_centroid[i].x, Occ_Image.size().height - wrapp.contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp.contours_centroid.size()+1, 1, 8);
+				putText(Drawing, text, cv::Point(wrapp_ptr->contours_centroid[i].x, Occ_image.size().height - wrapp_ptr->contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp_ptr->contours_centroid.size()+1, 1, 8);
 			}	
 			
 	////////////////////////
+//			cv::Mat croppedRef(Occ_image, resize_rect);			
+			resize_rect.y=Occ_image.size().height - (resize_rect.y + resize_rect.height);// because of the flipping images
+			resize_rect = resize_rect & Occ_Rect;
+			
+
 			cv::Mat croppedRef(Drawing, resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
+			
 
 			grad = croppedImage;
+//			grad = Drawing;
 
-//			grad = Occ_Image;
+//			grad = Occ_image;
 
 	//////////////////////
 	/////PUBLISH
@@ -319,13 +346,15 @@ class ROS_handler
 		cv::Mat extract_frontier(cv::Mat Occ_Image, DuDe_OpenCV_wrapper  &wrapp, Graph_Search &Graph_searcher){
 			//Occupancy Image to Free Space	
 			std::cout << "Extracting Frontier..... ";
-			cv::Mat thresholded_image = Occ_Image>210;
-		
-			cv::Mat black_image = Occ_Image<10;	
+//			cv::Mat thresholded_image = Occ_Image>210;
+			
+			cv::Mat open_space = Occ_Image<10;
+			cv::Mat black_image = Occ_Image>90 & Occ_Image<=100;		
+
 			cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
 				
 			cv::Mat Median_Image;
-			cv::medianBlur(Occ_Image>210, Median_Image, 3);
+			cv::medianBlur(open_space, Median_Image, 3);
 			cv::Mat Image_in = Median_Image & ~black_image;
 			 
 			cv::dilate(Median_Image, Median_Image, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
@@ -481,7 +510,7 @@ int main(int argc, char **argv)
   
   std::string mapname = "map";
   
-  float decomp_th=0.1;
+  float decomp_th=3;
   if (argc ==2){ decomp_th = atof(argv[1]); }
 
 

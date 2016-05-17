@@ -31,8 +31,10 @@ public:
 	string g_concavity_measure; // concavity_measure name
 	double g_alpha, g_beta; // for selecting cutting direction
 
-	double g_tau; //tolerance	
+	double g_tau; //tolerance in percentage 0-1	
 	float Area_threshold;
+	float g_tau_pixel;// tolerance in pixels
+	bool tolerance_in_pixels;
 	
 	c_dude dude;
 	Draw_Decoration draw_decoration;		
@@ -52,16 +54,20 @@ public:
 	
 	
 	DuDe_OpenCV_wrapper(){
-	    Area_threshold=20;
-	    g_tau= 0.2;
+	    Area_threshold=5; 
 	    dude= c_dude();
+		tolerance_in_pixels= false;	    
+		g_tau= 0.2;
+	    g_tau_pixel=60; //60 pixels
 	}
 	
 	~DuDe_OpenCV_wrapper(){
 	}
 
 	///////////////////////////////////
-	void set_Tau(float decomp_th ){g_tau=decomp_th;}
+	void set_Tau(float decomp_th ){g_tau=decomp_th;tolerance_in_pixels=false;}
+	///////////////////////////////////
+	void set_pixel_Tau(float decomp_th ){g_tau_pixel=decomp_th;tolerance_in_pixels=true;}
 	///////////////////////////////////
 	void insert_contour_to_poly(std::vector<cv::Point> contour_in, 	c_ply& polygon );
 	////////////////////////////////////////
