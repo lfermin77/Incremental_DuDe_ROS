@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(dude_ros)
+project(inc_dude)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -154,9 +154,9 @@ include(${CGAL_USE_FILE})
 # )
 
 ######## dude_ros
-add_executable(dude_ros src/dude_ros.cpp include/Graph.cpp include/wrapper.cpp)
+add_executable(inc_dude src/dude_ros.cpp include/Graph.cpp include/wrapper.cpp)
 
-target_link_libraries(dude_ros
+target_link_libraries(inc_dude
    ${catkin_LIBRARIES}
    ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/libdude2d.so
    ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/FIST/FIST.lib
@@ -166,7 +166,7 @@ target_link_libraries(dude_ros
  )
 
 
-add_dependencies(dude_ros ${catkin_LIBRARIES} ${CGAL_LIBRARIES})
+add_dependencies(inc_dude ${catkin_LIBRARIES} ${CGAL_LIBRARIES})
 
 #############
 ## Install ##

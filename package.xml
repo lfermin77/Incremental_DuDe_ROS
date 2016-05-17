@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>dude_ros</name>
+  <name>inc_dude</name>
   <version>0.0.0</version>
   <description>The dude_ros package</description>
 
