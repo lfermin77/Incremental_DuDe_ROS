@@ -18,7 +18,7 @@ void DuDe_OpenCV_wrapper::insert_contour_to_poly(std::vector<cv::Point> contour_
 
 ////////////////////////////////////////
 cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
-	
+	/*
 ///////////////////////////////	
 //Occupancy Image to Free Space	
 	std::cout << "Cleaning Image..... "; 		double start_cleaning = getTime();
@@ -37,13 +37,13 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 		cout << "copy........ ";
 	}
 	double end_cleaning = getTime();  cout << "done, it last "<<(end_cleaning-start_cleaning)<< " ms"  << endl;			
-
+*/
 ///////////////////////////////	
 //// Look for the big contours
 	std::cout << "Finding Contours....... "; double start_finding = getTime();
 	std::vector<std::vector<cv::Point> > Explored_contour;
 	std::vector<cv::Vec4i> hierarchy; //[Next, Previous, First_Child, Parent]
-	cv::findContours(cut_image, Explored_contour, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE );
+	cv::findContours(Occ_Image, Explored_contour, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE );
 		
 	int current_index=0;
 	cv::Rect resize_rect = boundingRect(Explored_contour[0]);
@@ -103,7 +103,7 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 
 ////////////////////////
 //Export files
-	export_all_svg_files();
+//	export_all_svg_files();
 
 ///////////////////////
 // Polygon to Contour

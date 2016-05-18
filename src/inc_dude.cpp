@@ -17,7 +17,27 @@
 #include "Graph.hpp"
 
 
+class Stable_graph
+{
+	public:
+	
+//	Nodes
+	std::vector<std::vector<cv::Point> > Decomposed_contours;
+	std::vector<cv::Point> contours_centroid;
+	std::vector<std::set<int> > contours_connections;
 
+// Edges
+	std::vector<cv::Point> diagonal_centroid;
+	std::vector<std::set<int> > diagonal_connections;
+	
+	Stable_graph(){
+		int b=2;
+	}
+
+	~Stable_graph(){
+	}
+
+};
 
 
 
@@ -58,6 +78,12 @@ class ROS_handler
 	
 	float Decomp_threshold_;
 	
+	Stable_graph stable_graph;
+	bool first_time;
+	
+	cv::Mat First_Image;
+	
+	
 	public:
 		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname), saved_map_(false), it_(n), Decomp_threshold_(threshold)
 		{
@@ -83,6 +109,8 @@ class ROS_handler
 			distance=0;
 			safety_distance = 1;
 			
+			first_time = true;
+			
 		}
 
 		~ROS_handler()
@@ -105,6 +133,7 @@ class ROS_handler
 			
 			cv::Mat grad;
 			DuDe_OpenCV_wrapper wrapp;
+			std::vector<DuDe_OpenCV_wrapper> wrapp_vector;
 //			wrapp.set_Tau(Decomp_threshold_);
 			float pixel_Tau = Decomp_threshold_ / Map_Info_.resolution;
 			wrapp.set_pixel_Tau(pixel_Tau);
@@ -135,12 +164,34 @@ class ROS_handler
 			cv::Rect Occ_Rect(0, 0, Occ_image.cols, Occ_image.rows);
 			img.copyTo(Occ_image(Enbigger_Rect));
 
-
+			cv::Rect resize_rect;
 	//////////////////////////////////////////////////////////
 	//// Decomposition
-			cv::Rect resize_rect = wrapp.Decomposer(Occ_image);
+			cv::Mat working_image;
+			if (first_time){
+				std::cout << "This is first time " << endl;
+				first_time = false;
+				First_Image = clean_image(Occ_image);
+				working_image = First_Image.clone();
+//				First_Image = Occ_image.clone();
+//				working_image = Occ_image.clone();
+			}
+			else{
+				working_image = clean_image(Occ_image);
+//				working_image = Occ_image | ~First_Image;			
+				working_image = working_image & ~First_Image;			
+			}
+			cv::Mat will_be_destroyed =working_image.clone();
+//			resize_rect = wrapp.Decomposer(working_image);
+			resize_rect = wrapp.Decomposer(will_be_destroyed);
+//			resize_rect = wrapp.Decomposer(clean_image(Occ_image));
 			wrapp.measure_performance();
 
+			wrapp.export_all_svg_files();
+
+			insert_DuDe_Graph(wrapp, Graph_searcher);
+			cv::Mat Colored_Frontier = extract_frontier(Occ_image, wrapp, Graph_searcher);
+/*
 	////////////////////////////////////////////////////
 	///// External Decomposition
 			DuDe_OpenCV_wrapper convex_edge;
@@ -159,7 +210,7 @@ class ROS_handler
 			
 			convex_edge.Decomposer(~Complement_Image);
 			
-			
+			/*
 	/////////////////////////////////////////////////////////		
 	//  Graph Search
 			insert_DuDe_Graph(wrapp, Graph_searcher);
@@ -217,8 +268,9 @@ class ROS_handler
 			croppedRef.copyTo(croppedImage);	
 			
 
-			grad = croppedImage;
+//			grad = croppedImage;
 //			grad = Drawing;
+			grad = working_image;
 
 //			grad = Occ_image;
 
@@ -489,7 +541,31 @@ class ROS_handler
 			return a;
 		}
 
+/////////////////////////
+//// UTILITY
+/////////////////////////
 
+		cv::Mat clean_image(cv::Mat Occ_Image){
+			//////////////////////////////	
+			//Occupancy Image to Free Space	
+			std::cout << "Cleaning Image..... "; 		double start_cleaning = getTime();
+			cv::Mat open_space = Occ_Image<10;
+			cv::Mat black_image = Occ_Image>90 & Occ_Image<=100;		
+			cv::Mat Median_Image, Image_in, cut_image ;
+			{
+				cout << "Entering........ ";
+				cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			
+				cout << "dilated........ ";
+				cv::medianBlur(open_space, Median_Image, 3);
+				cout << "Median Blur........ ";
+				Image_in = Median_Image & ~black_image;
+				cout << "And........ ";
+				Image_in.copyTo(cut_image);			
+				cout << "copy........ ";
+			}
+			double end_cleaning = getTime();  cout << "done, it last "<<(end_cleaning-start_cleaning)<< " ms"  << endl;	
+			return cut_image;
+		}
 
 		
 };
