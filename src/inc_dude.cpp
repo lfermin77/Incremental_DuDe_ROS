@@ -181,13 +181,34 @@ class ROS_handler
 //				working_image = Occ_image | ~First_Image;			
 				working_image = working_image & ~First_Image;			
 			}
-			cv::Mat will_be_destroyed =working_image.clone();
+			cv::Mat will_be_destroyed = working_image.clone();
 //			resize_rect = wrapp.Decomposer(working_image);
 			resize_rect = wrapp.Decomposer(will_be_destroyed);
 //			resize_rect = wrapp.Decomposer(clean_image(Occ_image));
 			wrapp.measure_performance();
 
 			wrapp.export_all_svg_files();
+			
+			std::vector<std::vector<cv::Point> > Differential_contour;
+			cv::findContours(will_be_destroyed, Differential_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
+			
+			vector<int> big_contours_map;
+			for(int i=0; i < Differential_contour.size(); i++){
+				float current_area = cv::contourArea(Differential_contour[i]);
+				if(current_area >10) big_contours_map.push_back(i);	
+			}
+			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+//			drawContours(Drawing_Diff, Differential_contour, -1, 255, -1, 8);
+//*
+			for(int i = 0; i <big_contours_map.size();i++){
+				drawContours(Drawing_Diff, Differential_contour, big_contours_map[i], 255, -1, 8);
+			}	
+			//*/
+			
+			
+			cout<<"Size of diferential: "<< big_contours_map.size() << endl;
+			
+			
 
 			insert_DuDe_Graph(wrapp, Graph_searcher);
 			cv::Mat Colored_Frontier = extract_frontier(Occ_image, wrapp, Graph_searcher);
@@ -270,7 +291,8 @@ class ROS_handler
 
 //			grad = croppedImage;
 //			grad = Drawing;
-			grad = working_image;
+//			grad = working_image;
+			grad = Drawing_Diff;
 
 //			grad = Occ_image;
 
