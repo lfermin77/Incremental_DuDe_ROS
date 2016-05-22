@@ -133,7 +133,7 @@ class ROS_handler
 			
 			cv::Mat grad;
 			DuDe_OpenCV_wrapper wrapp;
-			std::vector<DuDe_OpenCV_wrapper> wrapp_vector;
+
 //			wrapp.set_Tau(Decomp_threshold_);
 			float pixel_Tau = Decomp_threshold_ / Map_Info_.resolution;
 			wrapp.set_pixel_Tau(pixel_Tau);
@@ -192,22 +192,40 @@ class ROS_handler
 			std::vector<std::vector<cv::Point> > Differential_contour;
 			cv::findContours(will_be_destroyed, Differential_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
 			
+			
+			// multiple contours
+
+//			DuDe_OpenCV_wrapper *temporal_wrapp_ptr;
+								
 			vector<int> big_contours_map;
 			for(int i=0; i < Differential_contour.size(); i++){
 				float current_area = cv::contourArea(Differential_contour[i]);
-				if(current_area >10) big_contours_map.push_back(i);	
+				if(current_area >20) 	big_contours_map.push_back(i);	
 			}
+			vector<DuDe_OpenCV_wrapper> wrapp_ptr_vector(big_contours_map.size());
+			
+			for(int i = 0; i <big_contours_map.size();i++){
+				cv::Mat temporal_image_cut;
+				cv::Mat Temporal_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
+				drawContours(Temporal_Image, Differential_contour, big_contours_map[i], 255, -1, 8);
+				working_image.copyTo(temporal_image_cut,Temporal_Image);
+				wrapp_ptr_vector[i].Decomposer(temporal_image_cut);
+
+			}	
+
+
+
+
+		// Paint differential contours
 			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
-//			drawContours(Drawing_Diff, Differential_contour, -1, 255, -1, 8);
-//*
 			for(int i = 0; i <big_contours_map.size();i++){
 				drawContours(Drawing_Diff, Differential_contour, big_contours_map[i], 255, -1, 8);
 			}	
 			//*/
 			
 			
-			cout<<"Size of diferential: "<< big_contours_map.size() << endl;
-			
+			cout<<"Size of diferential: "<< wrapp_ptr_vector.size() << endl;
+
 			
 
 			insert_DuDe_Graph(wrapp, Graph_searcher);
