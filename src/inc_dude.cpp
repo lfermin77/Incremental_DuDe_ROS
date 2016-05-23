@@ -193,6 +193,7 @@ class ROS_handler
 			cv::findContours(will_be_destroyed, Differential_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
 			
 			
+			
 			// multiple contours
 
 				//*				
