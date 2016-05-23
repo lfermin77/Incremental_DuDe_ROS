@@ -168,16 +168,18 @@ class ROS_handler
 	//////////////////////////////////////////////////////////
 	//// Decomposition
 			cv::Mat working_image;
+			Occ_image = clean_image(Occ_image);
+			
 			if (first_time){
 				std::cout << "This is first time " << endl;
 				first_time = false;
-				First_Image = clean_image(Occ_image);
+				First_Image = Occ_image.clone();
 				working_image = First_Image.clone();
 //				First_Image = Occ_image.clone();
 //				working_image = Occ_image.clone();
 			}
 			else{
-				working_image = clean_image(Occ_image);
+				working_image = Occ_image.clone();
 //				working_image = Occ_image | ~First_Image;			
 				working_image = working_image & ~First_Image;			
 			}
