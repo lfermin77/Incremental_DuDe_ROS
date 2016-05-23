@@ -183,11 +183,11 @@ class ROS_handler
 			}
 			cv::Mat will_be_destroyed = working_image.clone();
 //			resize_rect = wrapp.Decomposer(working_image);
-			resize_rect = wrapp.Decomposer(will_be_destroyed);
+			resize_rect = wrapp.Decomposer(clean_image(Occ_image));
 //			resize_rect = wrapp.Decomposer(clean_image(Occ_image));
-			wrapp.measure_performance();
+//			wrapp.measure_performance();
 
-			wrapp.export_all_svg_files();
+//			wrapp.export_all_svg_files();
 			
 			std::vector<std::vector<cv::Point> > Differential_contour;
 			cv::findContours(will_be_destroyed, Differential_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
@@ -195,8 +195,7 @@ class ROS_handler
 			
 			// multiple contours
 
-//			DuDe_OpenCV_wrapper *temporal_wrapp_ptr;
-								
+				//*				
 			vector<int> big_contours_map;
 			for(int i=0; i < Differential_contour.size(); i++){
 				float current_area = cv::contourArea(Differential_contour[i]);
@@ -216,21 +215,29 @@ class ROS_handler
 
 
 
+
 		// Paint differential contours
 			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+/*
 			for(int i = 0; i <big_contours_map.size();i++){
 				drawContours(Drawing_Diff, Differential_contour, big_contours_map[i], 255, -1, 8);
+			}	*/
+			
+			for(int i = 0; i < wrapp_ptr_vector.size();i++){
+				for(int j = 0; j < wrapp_ptr_vector[i].Decomposed_contours.size();j++){
+					drawContours(Drawing_Diff, wrapp_ptr_vector[i].Decomposed_contours, j, 255, -1, 8);
+				}
 			}	
-			//*/
+
 			
 			
 			cout<<"Size of diferential: "<< wrapp_ptr_vector.size() << endl;
-
+			//*/
 			
 
 			insert_DuDe_Graph(wrapp, Graph_searcher);
 			cv::Mat Colored_Frontier = extract_frontier(Occ_image, wrapp, Graph_searcher);
-/*
+//*
 	////////////////////////////////////////////////////
 	///// External Decomposition
 			DuDe_OpenCV_wrapper convex_edge;
@@ -240,15 +247,17 @@ class ROS_handler
 			cv::Rect Convex_rect(cv::Point(resize_rect.x - pixel_Tau, resize_rect.y - pixel_Tau), 
 			                        cv::Point(resize_rect.br().x + pixel_Tau, resize_rect.br().y + pixel_Tau));
 
-   			resize_rect=Convex_rect & Occ_Rect;
+   			resize_rect = Convex_rect & Occ_Rect;
 
 			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
 			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
 			drawContours(Complement_Image, wrapp.Decomposed_contours, -1, 0, -1, 8);			
 			
-			convex_edge.Decomposer(~Complement_Image);
+			convex_edge.Decomposer(Complement_Image);
+			convex_edge.measure_performance();
 			
+			convex_edge.export_all_svg_files();
 			/*
 	/////////////////////////////////////////////////////////		
 	//  Graph Search
@@ -311,6 +320,7 @@ class ROS_handler
 //			grad = Drawing;
 //			grad = working_image;
 			grad = Drawing_Diff;
+//			grad = Complement_Image;
 
 //			grad = Occ_image;
 

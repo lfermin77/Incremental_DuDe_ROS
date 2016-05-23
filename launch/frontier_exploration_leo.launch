@@ -1,0 +1,60 @@
+<launch>
+	
+			<param name="use_sim_time" value="true" />
+
+	
+	<node pkg="stage" type="stageros" name="stage_node" args="/home/leonardo/catkin_ws/src/worlds/cave_willow.world">
+		<remap from="base_scan" to="scan"/>
+	</node>
+
+	<node pkg="gmapping" type="slam_gmapping" name="slam_node" >
+		<param name="map_update_interval" value="1" />
+
+	</node>
+
+
+	<node pkg="occupancy2voronoi" type="occupancy2voronoi" name="voronoi" >
+		<remap from="image_out" to="image_voronoi"/>
+	</node>
+
+	<node pkg="occupancy2voronoi" type="tf2position" name="pose_converter" >
+	</node>
+
+
+
+
+
+
+	<node pkg="move_base" type="move_base" name="navigation" output="screen" >
+		<param name="base_global_planner" type="string" value="navfn/NavfnROS"/>	
+		<param name="navfn/default_tolerance" type="double" value="0.5"/>	
+
+		<rosparam file="$(find orm-ros)/conf/global_costmap.yaml" command="load"  />
+		<rosparam file="$(find orm-ros)/conf/local_costmap.yaml" command="load"  />
+		<rosparam file="$(find orm-ros)/conf/pioneer_common_costmap.yaml" command="load" ns="global_costmap" />
+		<rosparam file="$(find orm-ros)/conf/pioneer_common_costmap.yaml" command="load" ns="local_costmap" />
+		
+	    <rosparam file="$(find orm-ros)/conf/base_local_planner_params.yaml" command="load" />
+
+		<param name="recovery_behavior_enabled" value="false"/> 
+		<param name="clearing_rotation_allowed" value="false"/>
+    </node>
+
+
+
+	<node pkg="rviz" type="rviz" name="visualizer" >
+	</node>
+
+	<node pkg="image_view" type="image_view" name="voronoi_viewer" >
+	<remap from="image" to="image_voronoi"/>
+	</node>
+
+	<node pkg="image_view" type="image_view" name="frontier_viewer" >
+	<remap from="image" to="image_frontier"/>
+	</node>
+
+	<node pkg="image_view" type="image_view" name="image_prueba" >
+	<remap from="image" to="image_out"/>
+	</node>
+
+</launch>

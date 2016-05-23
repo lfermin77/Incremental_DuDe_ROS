@@ -1,0 +1,29 @@
+<launch>
+	
+			<param name="use_sim_time" value="true" />
+
+	
+	<node pkg="stage" type="stageros" name="stage_node" args="/home/leonardo/catkin_ws/src/worlds/cave_willow.world">
+		<remap from="base_scan" to="scan"/>
+	</node>
+
+	<node pkg="gmapping" type="slam_gmapping" name="slam_node" >
+		<param name="map_update_interval" value="1" />
+
+	</node>
+
+
+
+
+
+
+
+
+
+	<node pkg="image_view" type="image_view" name="frontier_viewer" >
+	<remap from="image" to="image_frontier"/>
+	</node>
+
+
+
+</launch>
