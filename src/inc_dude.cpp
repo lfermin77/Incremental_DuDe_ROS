@@ -84,7 +84,7 @@ class ROS_handler
 	
 
 	bool first_time;	
-	cv::Mat First_Image;
+	cv::Mat Stable_Image;
 	Stable_graph Stable;
 	cv::Rect previous_rect;
 	
@@ -247,8 +247,14 @@ class ROS_handler
 			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
 			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
-			Complement_Image = Complement_Image & ~image_cleaned & ~(Occ_image < 10);
+			
+			cv::Mat black_image = (Occ_image>90) & (Occ_image<=100);
+			cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 5, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
+			
+			Complement_Image = Complement_Image & ~image_cleaned;
+			Complement_Image = Complement_Image & ~black_image;
 						
+			cv::Mat pepe = image_cleaned | black_image;
 			convex_edge.Decomposer(Complement_Image);
 //			convex_edge.measure_performance();
 			
@@ -288,6 +294,7 @@ class ROS_handler
 	//// Graph Inter-Graphs
 		//Connection to stable
 		///Use the open centroids to connect to images 
+		/*
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
@@ -295,13 +302,15 @@ class ROS_handler
 						cv::Point centroid;
 						vector<cv::Point> contour_to_compare = Stable.Region_contour[k];
 
-						bool connected = are_contours_connected(contour_to_compare, current_contour, centroid);
+						int connected = are_contours_connected(contour_to_compare, current_contour, centroid);
+//						if (connected) cout << "contour "<< j << " in region " <<i<< " is connected to stable region "<<k << endl;
 					}
 				}
 			}	
-		
+		//*/
 		//Connection to frontier
 		/// Convert previous code for frontier to accept secuence of contours 
+/*
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
@@ -310,9 +319,26 @@ class ROS_handler
 						vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
 
 						bool connected = are_contours_connected(contour_to_compare, current_contour, centroid);
+						if (connected) cout << "contour "<< j << " in region " <<i<< " is connected to frontier region "<<k << endl;
 					}
 				}
 			}	
+//*/
+		/// Convert previous code for frontier to accept secuence of contours 
+			for(int j = 0; j < wrapp.Decomposed_contours.size();j++){
+				vector<cv::Point> current_contour = wrapp.Decomposed_contours[j];
+				for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
+					cv::Point centroid;
+					vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
+
+					int connected = 0;
+					are_contours_connected(current_contour, contour_to_compare, centroid, connected);
+//					cout << "points in common "<< connected <<endl;
+					if (connected > 0){
+						cout << "contour "<< j << " is connected to frontier region "<< k <<endl;
+					}
+				}
+			}
 		
 
 
@@ -369,6 +395,7 @@ class ROS_handler
 //			grad = working_image;
 //			grad = Drawing_Diff;
 //			grad = stable_drawing;
+//			grad = pepe;
 
 //			grad = Occ_image;
 
@@ -665,22 +692,45 @@ class ROS_handler
 			return cut_image;
 		}
 
-		bool are_contours_connected(vector<cv::Point> first_contour, vector<cv::Point> second_contour, cv::Point &centroid){
+		void are_contours_connected(vector<cv::Point> first_contour, vector<cv::Point> second_contour, cv::Point &centroid, int &number_of_ones ){
 			vector<vector<cv::Point> > contour_checker;
 			contour_checker.push_back(first_contour);
 			contour_checker.push_back(second_contour);
+
 			
 			cv::Mat img1(Map_Info_.height, Map_Info_.width, CV_8U);
-			drawContours(img1, contour_checker, 0, 255, 2, 8);
+			drawContours(img1, contour_checker, 0, 1, 2, 8);
 
 			cv::Mat img2(Map_Info_.height, Map_Info_.width, CV_8U);
-			drawContours(img2, contour_checker, 1, 255, 2, 8);
+			drawContours(img2, contour_checker, 1, 1, 2, 8);
 			
-			img1 &= img2;
+			cv::Mat img3 = img1 & img2;
 
-			bool a=true;
-			return a;
+
+			
+			number_of_ones = cv::countNonZero(img3);
+
+
+			// access pixel coordinates
+			if(number_of_ones == 0){
+//				return false;
+			}
+			else{
+				vector<cv::Point> locations;   // output, locations of non-zero pixels
+				cv::findNonZero(img3, locations);
+				centroid=cv::Point(0,0);
+				for(int i=0;i< locations.size();i++){
+					centroid += locations[i];
+				}
+				centroid.x = centroid.x/locations.size();
+				centroid.y = centroid.y/locations.size();
+//				return true;
+//				cout<<"size " << number_of_ones <<endl;
+			}
+
 		}
+		
+		
 };
 
 
