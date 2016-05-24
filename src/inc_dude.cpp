@@ -287,7 +287,10 @@ class ROS_handler
 	//// Graph Inter-Graphs
 		//Connection to stable
 		//Use the open centroids to connect to images 
-		//*
+//			vector<pair<int,int> >  frontier_connections;
+			vector<vector<int> > stable_connections, frontier_connections, no_frontiers;
+			
+			int contour_sequence_number=0;
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
@@ -297,28 +300,71 @@ class ROS_handler
 
 						int connected = 0;
 						are_contours_connected(current_contour, contour_to_compare, centroid, connected);
-						if (connected>0) cout << "contour "<< j << " in region " <<i<< " is connected to stable region "<<k << endl;
+						if (connected>0){
+//							cout << "contour "<< j << " in region " <<i<< " is connected to stable region "<<k << endl;
+							int link[4]={i,j,k,contour_sequence_number};
+							std::vector<int> link_v(&link[0], &link[0]+4);
+							stable_connections.push_back(link_v);
+						}
+
 					}
+				contour_sequence_number++;
 				}
 			}	
-		//*/
+
 		//Connection to frontier
-
-			for(int j = 0; j < joint_contours.size();j++){
-				vector<cv::Point> current_contour = joint_contours[j];
-				for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
-					cv::Point centroid;
-					vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
-
-					int connected = 0;
-					are_contours_connected(current_contour, contour_to_compare, centroid, connected);
-//					cout << "points in common "<< connected <<endl;
-					if (connected > 0){
-						cout << "contour "<< j << " is connected to frontier region "<< k <<endl;
+			contour_sequence_number=0;
+			for(int i = 0; i < wrapper_vector.size();i++){
+				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
+					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
+					bool contour_without_frontier = true;
+					for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
+						cv::Point centroid;
+						vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
+	
+						int connected = 0;
+						are_contours_connected(current_contour, contour_to_compare, centroid, connected);
+	//					cout << "points in common "<< connected <<endl;
+						if (connected > 0){
+//							cout << "contour "<< contour_sequence_number << " is connected to frontier region "<< k <<endl;
+							int link[4]={i,j,k,contour_sequence_number};
+							std::vector<int> link_v(&link[0], &link[0]+4);
+							frontier_connections.push_back(link_v);
+							contour_without_frontier=false;
+						}
 					}
+					if(contour_without_frontier){
+						int link[3]={i,j,contour_sequence_number};
+						std::vector<int> link_v(&link[0], &link[0]+3);
+						no_frontiers.push_back(link_v);
+						cout << "contour "<< contour_sequence_number << " has not frontiers " <<endl;						
+						cout << "region "<< i << " contour "<< j <<endl;
+					}
+					contour_sequence_number++;
 				}
 			}
 		
+			cout<<endl<<endl;
+			// Frontier Conections
+/*
+			for(int i=0; i < frontier_connections.size();i++){
+				cout << "contour "<< frontier_connections[i][3] << " is connected to frontier region "<< frontier_connections[i][2] <<endl;
+			}
+//*/
+	///////////////////
+	//// Build stable graph
+		//Find contours with NO frontiers
+			for(int i=0; i < no_frontiers.size();i++){
+				int N_decomp = no_frontiers[i][0];
+				int N_contour = no_frontiers[i][1];
+				cout << "Region "<< N_decomp << " contour "<< N_contour <<endl;
+				Stable.Region_contour.push_back(wrapper_vector[N_decomp].Decomposed_contours[N_contour]);
+				previous_rect |= boundingRect(wrapper_vector[N_decomp].Decomposed_contours[N_contour]);
+
+			}	
+
+
+
 
 	//////////////////////
 	//// First Time
@@ -327,10 +373,10 @@ class ROS_handler
 				first_time = false;
 				for(int i = 0; i < wrapper_vector.size();i++){
 					for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
-						Stable.Region_contour.push_back(wrapper_vector[i].Decomposed_contours[j]);
+	//					Stable.Region_contour.push_back(wrapper_vector[i].Decomposed_contours[j]);
 					}
 				}	
-				previous_rect = resize_rect;
+//				previous_rect = resize_rect;
 			}
 
 
