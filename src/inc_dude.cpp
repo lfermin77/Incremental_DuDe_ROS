@@ -143,21 +143,21 @@ class ROS_handler
 			DuDe_OpenCV_wrapper wrapp;
 			wrapp.set_Tau(Decomp_threshold_);
 			wrapp.set_pixel_Tau(pixel_Tau);
-
-
 				
 			Graph_Search Graph_searcher;
 			
 			Map_Info_ = map-> info;						
+			clock_t begin = clock();
+			{
 			std::cout <<"Map_Info_.resolution  " << Map_Info_.resolution << std::endl;
 			std::cout <<"Pixel_Tau  " << pixel_Tau << std::endl;
 
-			clock_t begin = clock();
+
 			ROS_INFO("Received a %d X %d map @ %.3f m/pix",
 				map->info.width,
 				map->info.height,
 				map->info.resolution);
-			  
+			 } 
 			cv_ptr->header = map->header;
 
 	// Occupancy Grid to Image
@@ -182,7 +182,6 @@ class ROS_handler
 			drawContours(stable_drawing, Stable.Region_contour, -1, 255, -1, 8);
 			
 			cv::Mat working_image = image_cleaned & ~stable_drawing;
-
 			cv::Mat will_be_destroyed = working_image.clone();
 			
 			std::vector<std::vector<cv::Point> > Differential_contour;
@@ -199,15 +198,15 @@ class ROS_handler
 				if(current_area >20) 	big_contours_map.push_back(i);	
 			}
 
+			// Decompose in several wrappers
 			vector<DuDe_OpenCV_wrapper> wrapper_vector(big_contours_map.size());
-			
 			for(int i = 0; i <big_contours_map.size();i++){
 				cv::Mat temporal_image_cut;
 				cv::Mat Temporal_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
 				drawContours(Temporal_Image, Differential_contour, big_contours_map[i], 255, -1, 8);
 				working_image.copyTo(temporal_image_cut,Temporal_Image);
+				
 				resize_rect |= wrapper_vector[i].Decomposer(temporal_image_cut);
-
 			}	
 
 
@@ -220,9 +219,13 @@ class ROS_handler
 
 		// Paint differential contours
 			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+			vector<vector<cv::Point> > joint_contours;
+			vector<cv::Point> joint_centroids;
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 					drawContours(Drawing_Diff, wrapper_vector[i].Decomposed_contours, j, 255, -1, 8);
+					joint_contours.push_back(wrapper_vector[i].Decomposed_contours[j]);
+					joint_centroids.push_back(wrapper_vector[i].contours_centroid[j]);
 				}
 			}	
 
@@ -276,15 +279,15 @@ class ROS_handler
 				std::cout<<"All your Nodes are belong to us "<< std::endl;
 			}
 			//*/
-			
-			wrapp.Decomposer(image_cleaned);
-
+			///////////////////////
+//			wrapp.Decomposer(image_cleaned);
+			/////////////////////
 			
 	///////////////////////////////////
 	//// Graph Inter-Graphs
 		//Connection to stable
 		//Use the open centroids to connect to images 
-		/*
+		//*
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
@@ -292,16 +295,17 @@ class ROS_handler
 						cv::Point centroid;
 						vector<cv::Point> contour_to_compare = Stable.Region_contour[k];
 
-						int connected = are_contours_connected(contour_to_compare, current_contour, centroid);
-//						if (connected) cout << "contour "<< j << " in region " <<i<< " is connected to stable region "<<k << endl;
+						int connected = 0;
+						are_contours_connected(current_contour, contour_to_compare, centroid, connected);
+						if (connected>0) cout << "contour "<< j << " in region " <<i<< " is connected to stable region "<<k << endl;
 					}
 				}
 			}	
 		//*/
 		//Connection to frontier
 
-			for(int j = 0; j < wrapp.Decomposed_contours.size();j++){
-				vector<cv::Point> current_contour = wrapp.Decomposed_contours[j];
+			for(int j = 0; j < joint_contours.size();j++){
+				vector<cv::Point> current_contour = joint_contours[j];
 				for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
 					cv::Point centroid;
 					vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
@@ -353,17 +357,17 @@ class ROS_handler
 
 
 
-			wrapp_ptr= &wrapp;
+//			wrapp_ptr= &wrapp;
 			cv::Mat Drawing2 = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			
 			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
-			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
-				drawContours(Drawing2, wrapp_ptr->Decomposed_contours, i, i+1, -1, 8);
+			for(int i = 0; i <joint_contours.size();i++){
+				drawContours(Drawing2, joint_contours, i, i+1, -1, 8);
 			}	
 			cv::flip(Drawing2,Drawing2,0);
-			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
+			for(int i = 0; i <joint_contours.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
-				putText(Drawing2, text, cv::Point(wrapp_ptr->contours_centroid[i].x, Occ_image.size().height - wrapp_ptr->contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp_ptr->contours_centroid.size()+1, 1, 8);
+				putText(Drawing2, text, cv::Point(joint_centroids[i].x, Occ_image.size().height - joint_centroids[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, joint_contours.size()+1, 1, 8);
 			}	
 
 
