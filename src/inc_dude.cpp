@@ -173,7 +173,8 @@ class ROS_handler
 			img.copyTo(Occ_image(Enbigger_Rect));
 
 			cv::Rect resize_rect;
-			cv::Mat image_cleaned = clean_image(Occ_image);
+			cv::Mat black_image;
+			cv::Mat image_cleaned = clean_image(Occ_image, black_image);
 			
 	//////////////////////////////////////////////////////////
 	//// Decomposition
@@ -190,13 +191,14 @@ class ROS_handler
 			
 			
 			// multiple contours
-			resize_rect=previous_rect;
-				//*				
-			vector<int> big_contours_map;
+			resize_rect = previous_rect;
+
+			vector<int> big_contours_map;// map to big contours
 			for(int i=0; i < Differential_contour.size(); i++){
 				float current_area = cv::contourArea(Differential_contour[i]);
 				if(current_area >20) 	big_contours_map.push_back(i);	
 			}
+
 			vector<DuDe_OpenCV_wrapper> wrapper_vector(big_contours_map.size());
 			
 			for(int i = 0; i <big_contours_map.size();i++){
@@ -209,16 +211,7 @@ class ROS_handler
 			}	
 
 
-			if (first_time){
-				std::cout << "This is first time " << endl;
-				first_time = false;
-				for(int i = 0; i < wrapper_vector.size();i++){
-					for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
-						Stable.Region_contour.push_back(wrapper_vector[i].Decomposed_contours[j]);
-					}
-				}	
-				previous_rect = resize_rect;
-			}
+
 
 
 
@@ -248,13 +241,10 @@ class ROS_handler
 			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
 			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
 			
-			cv::Mat black_image = (Occ_image>90) & (Occ_image<=100);
-			cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 5, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
-			
 			Complement_Image = Complement_Image & ~image_cleaned;
 			Complement_Image = Complement_Image & ~black_image;
 						
-			cv::Mat pepe = image_cleaned | black_image;
+
 			convex_edge.Decomposer(Complement_Image);
 //			convex_edge.measure_performance();
 			
@@ -293,7 +283,7 @@ class ROS_handler
 	///////////////////////////////////
 	//// Graph Inter-Graphs
 		//Connection to stable
-		///Use the open centroids to connect to images 
+		//Use the open centroids to connect to images 
 		/*
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
@@ -309,22 +299,7 @@ class ROS_handler
 			}	
 		//*/
 		//Connection to frontier
-		/// Convert previous code for frontier to accept secuence of contours 
-/*
-			for(int i = 0; i < wrapper_vector.size();i++){
-				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
-					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
-					for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
-						cv::Point centroid;
-						vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
 
-						bool connected = are_contours_connected(contour_to_compare, current_contour, centroid);
-						if (connected) cout << "contour "<< j << " in region " <<i<< " is connected to frontier region "<<k << endl;
-					}
-				}
-			}	
-//*/
-		/// Convert previous code for frontier to accept secuence of contours 
 			for(int j = 0; j < wrapp.Decomposed_contours.size();j++){
 				vector<cv::Point> current_contour = wrapp.Decomposed_contours[j];
 				for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
@@ -340,6 +315,21 @@ class ROS_handler
 				}
 			}
 		
+
+	//////////////////////
+	//// First Time
+			if (first_time){
+				std::cout << "This is first time " << endl;
+				first_time = false;
+				for(int i = 0; i < wrapper_vector.size();i++){
+					for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
+						Stable.Region_contour.push_back(wrapper_vector[i].Decomposed_contours[j]);
+					}
+				}	
+				previous_rect = resize_rect;
+			}
+
+
 
 
 	////////////
@@ -395,7 +385,6 @@ class ROS_handler
 //			grad = working_image;
 //			grad = Drawing_Diff;
 //			grad = stable_drawing;
-//			grad = pepe;
 
 //			grad = Occ_image;
 
@@ -670,12 +659,12 @@ class ROS_handler
 //// UTILITY
 /////////////////////////
 
-		cv::Mat clean_image(cv::Mat Occ_Image){
+		cv::Mat clean_image(cv::Mat Occ_Image, cv::Mat &black_image){
 			//////////////////////////////	
 			//Occupancy Image to Free Space	
 			std::cout << "Cleaning Image..... "; 		double start_cleaning = getTime();
 			cv::Mat open_space = Occ_Image<10;
-			cv::Mat black_image = Occ_Image>90 & Occ_Image<=100;		
+			black_image = Occ_Image>90 & Occ_Image<=100;		
 			cv::Mat Median_Image, Image_in, cut_image ;
 			{
 				cout << "Entering........ ";
@@ -692,43 +681,33 @@ class ROS_handler
 			return cut_image;
 		}
 
+
 		void are_contours_connected(vector<cv::Point> first_contour, vector<cv::Point> second_contour, cv::Point &centroid, int &number_of_ones ){
-			vector<vector<cv::Point> > contour_checker;
-			contour_checker.push_back(first_contour);
-			contour_checker.push_back(second_contour);
-
 			
-			cv::Mat img1(Map_Info_.height, Map_Info_.width, CV_8U);
-			drawContours(img1, contour_checker, 0, 1, 2, 8);
-
-			cv::Mat img2(Map_Info_.height, Map_Info_.width, CV_8U);
-			drawContours(img2, contour_checker, 1, 1, 2, 8);
+			vector< cv::Point > closer_point;
+			cv::Point acum(0,0);
+			int threshold=2;
 			
-			cv::Mat img3 = img1 & img2;
-
-
-			
-			number_of_ones = cv::countNonZero(img3);
-
-
-			// access pixel coordinates
-			if(number_of_ones == 0){
-//				return false;
-			}
-			else{
-				vector<cv::Point> locations;   // output, locations of non-zero pixels
-				cv::findNonZero(img3, locations);
-				centroid=cv::Point(0,0);
-				for(int i=0;i< locations.size();i++){
-					centroid += locations[i];
+			for(int i=0; i<first_contour.size();i++){
+				for(int j=0; j< second_contour.size();j++){
+					float distance;
+					distance = cv::norm(first_contour[i] -  second_contour[j] );
+					if(distance < threshold){
+						cv::Point point_to_add;
+						point_to_add.x = (first_contour[i].x + second_contour[j].x)/2;
+						point_to_add.y = (first_contour[i].y + second_contour[j].y)/2;
+						
+						closer_point.push_back(point_to_add);
+						acum += point_to_add;						
+					 }					
 				}
-				centroid.x = centroid.x/locations.size();
-				centroid.y = centroid.y/locations.size();
-//				return true;
-//				cout<<"size " << number_of_ones <<endl;
 			}
 
+			number_of_ones = closer_point.size();
+			centroid.x = acum.x/number_of_ones;
+			centroid.y = acum.y/number_of_ones;
 		}
+		
 		
 		
 };
