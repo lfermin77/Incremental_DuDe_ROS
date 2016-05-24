@@ -82,12 +82,11 @@ class ROS_handler
 	
 	float Decomp_threshold_;
 	
-	Stable_graph stable_graph;
-	bool first_time;
-	
+
+	bool first_time;	
 	cv::Mat First_Image;
 	Stable_graph Stable;
-	
+	cv::Rect previous_rect;
 	
 	public:
 		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname), saved_map_(false), it_(n), Decomp_threshold_(threshold)
@@ -109,6 +108,8 @@ class ROS_handler
 			Map_Info_.resolution=0.05; //default;
 			Map_Info_.width=4000; //default;
 			Map_Info_.height=4000; //default;
+			cv::Rect default_Rect(2000,2000,0,0);  // default
+			previous_rect = default_Rect ;
 			
 			position_cm_ = cv::Point(0,0); 
 			distance=0;
@@ -137,12 +138,14 @@ class ROS_handler
 		{
 			
 			cv::Mat grad;
-			DuDe_OpenCV_wrapper wrapp;
+			float pixel_Tau = Decomp_threshold_ / Map_Info_.resolution;			
 
-//			wrapp.set_Tau(Decomp_threshold_);
-			float pixel_Tau = Decomp_threshold_ / Map_Info_.resolution;
+			DuDe_OpenCV_wrapper wrapp;
+			wrapp.set_Tau(Decomp_threshold_);
 			wrapp.set_pixel_Tau(pixel_Tau);
-			
+
+
+				
 			Graph_Search Graph_searcher;
 			
 			Map_Info_ = map-> info;						
@@ -171,33 +174,15 @@ class ROS_handler
 
 			cv::Rect resize_rect;
 			cv::Mat image_cleaned = clean_image(Occ_image);
+			
 	//////////////////////////////////////////////////////////
 	//// Decomposition
-			cv::Mat stable_drawing(map->info.height, map->info.width, CV_8U);
+			cv::Mat stable_drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			drawContours(stable_drawing, Stable.Region_contour, -1, 255, -1, 8);
 			
-			cv::Mat working_image;
-						
-			if (first_time){
-				std::cout << "This is first time " << endl;
-				first_time = false;
-				First_Image = image_cleaned.clone();
-				working_image = image_cleaned.clone();
-//				First_Image = Occ_image.clone();
-//				working_image = Occ_image.clone();
-			}
-			else{
-				working_image = image_cleaned.clone();
-//				working_image = Occ_image | ~First_Image;			
-				working_image = working_image & ~First_Image;			
-			}
-			cv::Mat will_be_destroyed = working_image.clone();
-//			resize_rect = wrapp.Decomposer(working_image);
-			resize_rect = wrapp.Decomposer(clean_image(Occ_image));
-//			resize_rect = wrapp.Decomposer(clean_image(Occ_image));
-//			wrapp.measure_performance();
+			cv::Mat working_image = image_cleaned & ~stable_drawing;
 
-//			wrapp.export_all_svg_files();
+			cv::Mat will_be_destroyed = working_image.clone();
 			
 			std::vector<std::vector<cv::Point> > Differential_contour;
 			cv::findContours(will_be_destroyed, Differential_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
@@ -205,50 +190,49 @@ class ROS_handler
 			
 			
 			// multiple contours
-
+			resize_rect=previous_rect;
 				//*				
 			vector<int> big_contours_map;
 			for(int i=0; i < Differential_contour.size(); i++){
 				float current_area = cv::contourArea(Differential_contour[i]);
 				if(current_area >20) 	big_contours_map.push_back(i);	
 			}
-			vector<DuDe_OpenCV_wrapper> wrapp_ptr_vector(big_contours_map.size());
+			vector<DuDe_OpenCV_wrapper> wrapper_vector(big_contours_map.size());
 			
 			for(int i = 0; i <big_contours_map.size();i++){
 				cv::Mat temporal_image_cut;
 				cv::Mat Temporal_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
 				drawContours(Temporal_Image, Differential_contour, big_contours_map[i], 255, -1, 8);
 				working_image.copyTo(temporal_image_cut,Temporal_Image);
-				wrapp_ptr_vector[i].Decomposer(temporal_image_cut);
+				resize_rect |= wrapper_vector[i].Decomposer(temporal_image_cut);
 
 			}	
 
 
+			if (first_time){
+				std::cout << "This is first time " << endl;
+				first_time = false;
+				for(int i = 0; i < wrapper_vector.size();i++){
+					for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
+						Stable.Region_contour.push_back(wrapper_vector[i].Decomposed_contours[j]);
+					}
+				}	
+				previous_rect = resize_rect;
+			}
 
+
+
+			cout<<"Size of diferential: "<< Stable.Region_contour.size() << endl;
 
 
 		// Paint differential contours
 			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
-/*
-			for(int i = 0; i <big_contours_map.size();i++){
-				drawContours(Drawing_Diff, Differential_contour, big_contours_map[i], 255, -1, 8);
-			}	*/
-			
-			for(int i = 0; i < wrapp_ptr_vector.size();i++){
-				for(int j = 0; j < wrapp_ptr_vector[i].Decomposed_contours.size();j++){
-					drawContours(Drawing_Diff, wrapp_ptr_vector[i].Decomposed_contours, j, 255, -1, 8);
+			for(int i = 0; i < wrapper_vector.size();i++){
+				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
+					drawContours(Drawing_Diff, wrapper_vector[i].Decomposed_contours, j, 255, -1, 8);
 				}
 			}	
 
-			
-			
-			cout<<"Size of diferential: "<< wrapp_ptr_vector.size() << endl;
-			//*/
-			
-
-			insert_DuDe_Graph(wrapp, Graph_searcher);
-			cv::Mat Colored_Frontier = extract_frontier(Occ_image, wrapp, Graph_searcher);
-//*
 	////////////////////////////////////////////////////
 	///// External Decomposition
 			DuDe_OpenCV_wrapper convex_edge;
@@ -263,10 +247,8 @@ class ROS_handler
 			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
 			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
-			Complement_Image = Complement_Image & ~image_cleaned;
-			
-//			drawContours(Complement_Image, wrapp.Decomposed_contours, -1, 0, -1, 8);			
-			
+			Complement_Image = Complement_Image & ~image_cleaned & ~(Occ_image < 10);
+						
 			convex_edge.Decomposer(Complement_Image);
 //			convex_edge.measure_performance();
 			
@@ -299,14 +281,49 @@ class ROS_handler
 			}
 			//*/
 			
+			wrapp.Decomposer(image_cleaned);
+
+			
+	///////////////////////////////////
+	//// Graph Inter-Graphs
+		//Connection to stable
+		///Use the open centroids to connect to images 
+			for(int i = 0; i < wrapper_vector.size();i++){
+				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
+					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
+					for(int k = 0; k < Stable.Region_contour.size();k++){
+						cv::Point centroid;
+						vector<cv::Point> contour_to_compare = Stable.Region_contour[k];
+
+						bool connected = are_contours_connected(contour_to_compare, current_contour, centroid);
+					}
+				}
+			}	
+		
+		//Connection to frontier
+		/// Convert previous code for frontier to accept secuence of contours 
+			for(int i = 0; i < wrapper_vector.size();i++){
+				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
+					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
+					for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
+						cv::Point centroid;
+						vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
+
+						bool connected = are_contours_connected(contour_to_compare, current_contour, centroid);
+					}
+				}
+			}	
+		
+
+
 	////////////
 	//Draw Image
 			cv::Mat Drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			
 			DuDe_OpenCV_wrapper *wrapp_ptr;
 
-//			wrapp_ptr= &convex_edge;
-			wrapp_ptr= &wrapp;
+			wrapp_ptr= &convex_edge;
+//			wrapp_ptr= &wrapp;
 
 			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
 			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
@@ -317,6 +334,24 @@ class ROS_handler
 				stringstream mix;      mix<<i;				std::string text = mix.str();
 				putText(Drawing, text, cv::Point(wrapp_ptr->contours_centroid[i].x, Occ_image.size().height - wrapp_ptr->contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp_ptr->contours_centroid.size()+1, 1, 8);
 			}	
+
+
+
+			wrapp_ptr= &wrapp;
+			cv::Mat Drawing2 = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
+			
+			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
+			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
+				drawContours(Drawing2, wrapp_ptr->Decomposed_contours, i, i+1, -1, 8);
+			}	
+			cv::flip(Drawing2,Drawing2,0);
+			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
+				stringstream mix;      mix<<i;				std::string text = mix.str();
+				putText(Drawing2, text, cv::Point(wrapp_ptr->contours_centroid[i].x, Occ_image.size().height - wrapp_ptr->contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp_ptr->contours_centroid.size()+1, 1, 8);
+			}	
+
+
+
 			
 	////////////////////////
 //			cv::Mat croppedRef(Occ_image, resize_rect);			
@@ -324,16 +359,16 @@ class ROS_handler
 			resize_rect = resize_rect & Occ_Rect;
 			
 
-			cv::Mat croppedRef(Drawing, resize_rect);			
+			cv::Mat croppedRef(Drawing + Drawing2, resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
 			
 
-//			grad = croppedImage;
+			grad = croppedImage;
 //			grad = Drawing;
 //			grad = working_image;
-			grad = Drawing_Diff;
-//			grad = Complement_Image;
+//			grad = Drawing_Diff;
+//			grad = stable_drawing;
 
 //			grad = Occ_image;
 
@@ -630,7 +665,22 @@ class ROS_handler
 			return cut_image;
 		}
 
-		
+		bool are_contours_connected(vector<cv::Point> first_contour, vector<cv::Point> second_contour, cv::Point &centroid){
+			vector<vector<cv::Point> > contour_checker;
+			contour_checker.push_back(first_contour);
+			contour_checker.push_back(second_contour);
+			
+			cv::Mat img1(Map_Info_.height, Map_Info_.width, CV_8U);
+			drawContours(img1, contour_checker, 0, 255, 2, 8);
+
+			cv::Mat img2(Map_Info_.height, Map_Info_.width, CV_8U);
+			drawContours(img2, contour_checker, 1, 255, 2, 8);
+			
+			img1 &= img2;
+
+			bool a=true;
+			return a;
+		}
 };
 
 
