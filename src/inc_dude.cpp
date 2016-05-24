@@ -22,9 +22,9 @@ class Stable_graph
 	public:
 	
 //	Nodes
-	std::vector<std::vector<cv::Point> > Decomposed_contours;
-	std::vector<cv::Point> contours_centroid;
-	std::vector<std::set<int> > contours_connections;
+	std::vector<std::vector<cv::Point> > Region_contour;
+	std::vector<cv::Point> Region_centroid;
+	std::vector<std::set<int> > Region_connections;
 
 // Edges
 	std::vector<cv::Point> diagonal_centroid;
@@ -35,6 +35,10 @@ class Stable_graph
 	}
 
 	~Stable_graph(){
+	}
+	
+	void init_with_wrapper(){
+		int a=2;
 	}
 
 };
@@ -82,6 +86,7 @@ class ROS_handler
 	bool first_time;
 	
 	cv::Mat First_Image;
+	Stable_graph Stable;
 	
 	
 	public:
@@ -165,21 +170,24 @@ class ROS_handler
 			img.copyTo(Occ_image(Enbigger_Rect));
 
 			cv::Rect resize_rect;
+			cv::Mat image_cleaned = clean_image(Occ_image);
 	//////////////////////////////////////////////////////////
 	//// Decomposition
-			cv::Mat working_image;
-			Occ_image = clean_image(Occ_image);
+			cv::Mat stable_drawing(map->info.height, map->info.width, CV_8U);
+			drawContours(stable_drawing, Stable.Region_contour, -1, 255, -1, 8);
 			
+			cv::Mat working_image;
+						
 			if (first_time){
 				std::cout << "This is first time " << endl;
 				first_time = false;
-				First_Image = Occ_image.clone();
-				working_image = First_Image.clone();
+				First_Image = image_cleaned.clone();
+				working_image = image_cleaned.clone();
 //				First_Image = Occ_image.clone();
 //				working_image = Occ_image.clone();
 			}
 			else{
-				working_image = Occ_image.clone();
+				working_image = image_cleaned.clone();
 //				working_image = Occ_image | ~First_Image;			
 				working_image = working_image & ~First_Image;			
 			}
@@ -255,10 +263,12 @@ class ROS_handler
 			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
 			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
-			drawContours(Complement_Image, wrapp.Decomposed_contours, -1, 0, -1, 8);			
+			Complement_Image = Complement_Image & ~image_cleaned;
+			
+//			drawContours(Complement_Image, wrapp.Decomposed_contours, -1, 0, -1, 8);			
 			
 			convex_edge.Decomposer(Complement_Image);
-			convex_edge.measure_performance();
+//			convex_edge.measure_performance();
 			
 			convex_edge.export_all_svg_files();
 			/*
