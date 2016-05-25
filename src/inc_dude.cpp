@@ -148,6 +148,11 @@ class ROS_handler
 			
 			Map_Info_ = map-> info;						
 			clock_t begin = clock();
+			
+			clock_t begin_process, end_process;
+			double elapsed_secs_process;// = double(end_process - begin_process) / CLOCKS_PER_SEC;
+//			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process "<< elapsed_secs_process*1000 << " ms"<<std::endl;
+
 			{
 			std::cout <<"Map_Info_.resolution  " << Map_Info_.resolution << std::endl;
 			std::cout <<"Pixel_Tau  " << pixel_Tau << std::endl;
@@ -159,8 +164,11 @@ class ROS_handler
 				map->info.resolution);
 			 } 
 			cv_ptr->header = map->header;
-
+			
+	///////////////////////////////////
 	// Occupancy Grid to Image
+			begin_process = clock();
+			
 			cv::Mat img(map->info.height, map->info.width, CV_8U);
 			img.data = (unsigned char *)(&(map->data[0]) );
 
@@ -176,8 +184,12 @@ class ROS_handler
 			cv::Mat black_image;
 			cv::Mat image_cleaned = clean_image(Occ_image, black_image);
 			
+			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process transform "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
+
 	//////////////////////////////////////////////////////////
 	//// Decomposition
+			begin_process = clock();
+
 			cv::Mat stable_drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			drawContours(stable_drawing, Stable.Region_contour, -1, 255, -1, 8);
 			
@@ -214,23 +226,27 @@ class ROS_handler
 
 
 
-			cout<<"Size of diferential: "<< Stable.Region_contour.size() << endl;
-
+//			cout<<"Size of diferential: "<< Stable.Region_contour.size() << endl;
 
 		// Paint differential contours
-			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+//			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			vector<vector<cv::Point> > joint_contours;
 			vector<cv::Point> joint_centroids;
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
-					drawContours(Drawing_Diff, wrapper_vector[i].Decomposed_contours, j, 255, -1, 8);
+//					drawContours(Drawing_Diff, wrapper_vector[i].Decomposed_contours, j, 255, -1, 8);
 					joint_contours.push_back(wrapper_vector[i].Decomposed_contours[j]);
 					joint_centroids.push_back(wrapper_vector[i].contours_centroid[j]);
 				}
 			}	
 
-	////////////////////////////////////////////////////
-	///// External Decomposition
+			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process multiple Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
+
+
+		////////////////////////////////////////////////////
+		///// External Decomposition
+			begin_process = clock();
+
 			DuDe_OpenCV_wrapper convex_edge;
 			pixel_Tau = safety_distance / Map_Info_.resolution; 
 			convex_edge.set_pixel_Tau(pixel_Tau);			
@@ -252,39 +268,13 @@ class ROS_handler
 //			convex_edge.measure_performance();
 			
 			convex_edge.export_all_svg_files();
-			/*
-	/////////////////////////////////////////////////////////		
-	//  Graph Search
-			insert_DuDe_Graph(wrapp, Graph_searcher);
-			cv::Mat Colored_Frontier = extract_frontier(Occ_image, wrapp, Graph_searcher);
 			
-			int start =0;
-			//start = find_current_convex(wrapp);
-			Graph_searcher.starting_node_= start;                              /////
-			Graph_searcher.Graph_Node_List_[start].distance_from_start_ = 0;  //////			
+			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process external Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 
-			Graph_searcher.dijkstra_min_dist();
-			if (Graph_searcher.frontier_connected_.size()>0){
-//				Graph_searcher.print_graph_attributes();				 Graph_searcher.print_frontier_attributes();		//		Graph_searcher.print_frontier_connected();	
-				Graph_searcher.frontiers_minima();
-				Convex_Marker_.clear();
-				Convex_Marker_.push_back( Graph_searcher.Positions_Path);
-		//*
-				std::vector<cv::Point> proxy;
-				proxy.push_back(robot_position_image_);
-				Convex_Marker_.push_back(proxy);
-		///
-			}
-			else{
-				std::cout<<"All your Nodes are belong to us "<< std::endl;
-			}
-			//*/
-			///////////////////////
-//			wrapp.Decomposer(image_cleaned);
-			/////////////////////
-			
 	///////////////////////////////////
 	//// Graph Inter-Graphs
+			begin_process = clock();
+
 		//Connection to stable
 		//Use the open centroids to connect to images 
 //			vector<pair<int,int> >  frontier_connections;
@@ -337,8 +327,8 @@ class ROS_handler
 						int link[3]={i,j,contour_sequence_number};
 						std::vector<int> link_v(&link[0], &link[0]+3);
 						no_frontiers.push_back(link_v);
-						cout << "contour "<< contour_sequence_number << " has not frontiers " <<endl;						
-						cout << "region "<< i << " contour "<< j <<endl;
+//						cout << "contour "<< contour_sequence_number << " has not frontiers " <<endl;						
+//						cout << "region "<< i << " contour "<< j <<endl;
 					}
 					contour_sequence_number++;
 				}
@@ -365,25 +355,13 @@ class ROS_handler
 
 
 
-
-	//////////////////////
-	//// First Time
-			if (first_time){
-				std::cout << "This is first time " << endl;
-				first_time = false;
-				for(int i = 0; i < wrapper_vector.size();i++){
-					for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
-	//					Stable.Region_contour.push_back(wrapper_vector[i].Decomposed_contours[j]);
-					}
-				}	
-//				previous_rect = resize_rect;
-			}
-
-
+			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process Inter Graph "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 
 
 	////////////
 	//Draw Image
+			begin_process = clock();
+
 			cv::Mat Drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			
 			DuDe_OpenCV_wrapper *wrapp_ptr;
@@ -429,6 +407,7 @@ class ROS_handler
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
 			
+			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process Paint "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 
 			grad = croppedImage;
 //			grad = Drawing;
