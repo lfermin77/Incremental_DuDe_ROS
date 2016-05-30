@@ -87,6 +87,8 @@ class ROS_handler
 	cv::Mat Stable_Image;
 	Stable_graph Stable;
 	cv::Rect previous_rect;
+	cv::Rect *previous_rect_ptr;
+	std::vector <float> time_vector;
 	
 	public:
 		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname), saved_map_(false), it_(n), Decomp_threshold_(threshold)
@@ -110,7 +112,7 @@ class ROS_handler
 			Map_Info_.height=4000; //default;
 			cv::Rect default_Rect(2000,2000,0,0);  // default
 			previous_rect = default_Rect ;
-			
+			previous_rect_ptr= NULL;
 			position_cm_ = cv::Point(0,0); 
 			distance=0;
 			safety_distance = 1;
@@ -191,7 +193,7 @@ class ROS_handler
 			begin_process = clock();
 
 			cv::Mat stable_drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
-			drawContours(stable_drawing, Stable.Region_contour, -1, 255, -1, 8);
+//			drawContours(stable_drawing, Stable.Region_contour, -1, 255, -1, 8);
 			
 			cv::Mat working_image = image_cleaned & ~stable_drawing;
 			cv::Mat will_be_destroyed = working_image.clone();
@@ -199,28 +201,36 @@ class ROS_handler
 			std::vector<std::vector<cv::Point> > Differential_contour;
 			cv::findContours(will_be_destroyed, Differential_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
 			
-			
+			if(previous_rect_ptr==NULL){
+				cout<< "first time "<< endl<< endl<< endl;
+				previous_rect_ptr = &previous_rect;
+			}
 			
 			// multiple contours
 			resize_rect = previous_rect;
+			cv::Mat Glued_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);		
 
 			vector<int> big_contours_map;// map to big contours
 			for(int i=0; i < Differential_contour.size(); i++){
 				float current_area = cv::contourArea(Differential_contour[i]);
-				if(current_area >20) 	big_contours_map.push_back(i);	
+				if(current_area >200){
+					big_contours_map.push_back(i);	
+				}
 			}
 
 			// Decompose in several wrappers
 			vector<DuDe_OpenCV_wrapper> wrapper_vector(big_contours_map.size());
 			for(int i = 0; i <big_contours_map.size();i++){
-				cv::Mat temporal_image_cut;
 				cv::Mat Temporal_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
+				cv::Mat temporal_image_cut = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
 				drawContours(Temporal_Image, Differential_contour, big_contours_map[i], 255, -1, 8);
 				working_image.copyTo(temporal_image_cut,Temporal_Image);
+				Glued_Image |= temporal_image_cut;
+				
+				wrapper_vector[i].set_pixel_Tau(pixel_Tau);			
 				
 				resize_rect |= wrapper_vector[i].Decomposer(temporal_image_cut);
 			}	
-
 
 
 
@@ -246,28 +256,57 @@ class ROS_handler
 		////////////////////////////////////////////////////
 		///// External Decomposition
 			begin_process = clock();
+			
+			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 
-			DuDe_OpenCV_wrapper convex_edge;
 			pixel_Tau = safety_distance / Map_Info_.resolution; 
-			convex_edge.set_pixel_Tau(pixel_Tau);			
-
 			cv::Rect Convex_rect(cv::Point(resize_rect.x - pixel_Tau, resize_rect.y - pixel_Tau), 
 			                        cv::Point(resize_rect.br().x + pixel_Tau, resize_rect.br().y + pixel_Tau));
 
    			resize_rect = Convex_rect & Occ_Rect;
 
-			cv::Mat Complement_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+
+/*
+			DuDe_OpenCV_wrapper convex_edge;
+
+//			convex_edge.set_pixel_Tau(pixel_Tau);			
+			convex_edge.set_pixel_Tau(100000);			
+
+
+
+
 			//(Occ_image.size().height, Occ_image.size().width, CV_8UC1, 0);
 			cv::rectangle(Complement_Image, resize_rect, 255, -1 );
-			
-			Complement_Image = Complement_Image & ~image_cleaned;
-			Complement_Image = Complement_Image & ~black_image;
-						
+			//*/
+//			Complement_Image = Complement_Image & ~image_cleaned;			Complement_Image = Complement_Image & ~black_image;
 
-			convex_edge.Decomposer(Complement_Image);
+			Complement_Image = image_cleaned | black_image;			
+
+
+
+
+						
+			will_be_destroyed = Complement_Image.clone();
+			cv::findContours(will_be_destroyed, Differential_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE ); //Recycling variables
+
+			float max_area=0;
+			int max_index=0;
+			for(int i=0; i < Differential_contour.size(); i++){
+				float current_area = cv::contourArea(Differential_contour[i]);
+				if(current_area >max_area){
+					max_area = current_area;
+					max_index=i;
+				}
+			}
+
+//			convex_edge.Decomposer(Complement_Image);
 //			convex_edge.measure_performance();
 			
-			convex_edge.export_all_svg_files();
+//			convex_edge.export_all_svg_files();
+			
+			std::cerr<<"Time elapsed in process multiple Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
+			
+			time_vector.push_back(elapsed_secs_process*1000);
 			
 			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process external Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 
@@ -308,29 +347,28 @@ class ROS_handler
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 					vector<cv::Point> current_contour = wrapper_vector[i].Decomposed_contours[j];
 					bool contour_without_frontier = true;
-					for(int k = 0; k < convex_edge.Decomposed_contours.size()  ;k++){
-						cv::Point centroid;
-						vector<cv::Point> contour_to_compare = convex_edge.Decomposed_contours[k];
-	
-						int connected = 0;
-						are_contours_connected(current_contour, contour_to_compare, centroid, connected);
-	//					cout << "points in common "<< connected <<endl;
-						if (connected > 0){
-//							cout << "contour "<< contour_sequence_number << " is connected to frontier region "<< k <<endl;
-							int link[4]={i,j,k,contour_sequence_number};
-							std::vector<int> link_v(&link[0], &link[0]+4);
-							frontier_connections.push_back(link_v);
-							contour_without_frontier=false;
-						}
+					
+					cv::Point centroid;
+					vector<cv::Point> contour_to_compare = Differential_contour[max_index];
+
+					int connected = 0;
+					are_contours_connected(current_contour, contour_to_compare, centroid, connected);
+
+					if (connected > 0){
+							cout << "contour "<< contour_sequence_number << " is connected to frontier region " <<endl;
+						int link[4]={i,j,0,contour_sequence_number};
+						std::vector<int> link_v(&link[0], &link[0]+4);
+						frontier_connections.push_back(link_v);
+						contour_without_frontier=false;
 					}
 					if(contour_without_frontier){
 						int link[3]={i,j,contour_sequence_number};
 						std::vector<int> link_v(&link[0], &link[0]+3);
 						no_frontiers.push_back(link_v);
-//						cout << "contour "<< contour_sequence_number << " has not frontiers " <<endl;						
-//						cout << "region "<< i << " contour "<< j <<endl;
+							cout << "contour "<< contour_sequence_number << " has not frontiers " <<endl;						
+	//						cout << "region "<< i << " contour "<< j <<endl;
 					}
-					contour_sequence_number++;
+				contour_sequence_number++;
 				}
 			}
 		
@@ -366,22 +404,21 @@ class ROS_handler
 			
 			DuDe_OpenCV_wrapper *wrapp_ptr;
 
-			wrapp_ptr= &convex_edge;
+//			wrapp_ptr= &convex_edge;
 //			wrapp_ptr= &wrapp;
 
-			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
-			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
-				drawContours(Drawing, wrapp_ptr->Decomposed_contours, i, i+1, -1, 8);
-			}	
+			std::cout << "Decomposed_contours.size() "<< Differential_contour.size() << std::endl;
+			drawContours(Drawing, Differential_contour, max_index, 1, -1, 8);
 			cv::flip(Drawing,Drawing,0);
+/*
 			for(int i = 0; i <wrapp_ptr->Decomposed_contours.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
 				putText(Drawing, text, cv::Point(wrapp_ptr->contours_centroid[i].x, Occ_image.size().height - wrapp_ptr->contours_centroid[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, wrapp_ptr->contours_centroid.size()+1, 1, 8);
 			}	
+*/
 
 
-
-//			wrapp_ptr= &wrapp;
+			wrapp_ptr= &wrapp;
 			cv::Mat Drawing2 = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			
 			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
@@ -411,7 +448,7 @@ class ROS_handler
 
 			grad = croppedImage;
 //			grad = Drawing;
-//			grad = working_image;
+//			grad = Glued_Image;
 //			grad = Drawing_Diff;
 //			grad = stable_drawing;
 
@@ -429,7 +466,12 @@ class ROS_handler
 			clock_t end = clock();
 			double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 			std::cout <<"Current Distance  " << distance << std::endl;
-			std::cerr<<"Time elapsed  "<< elapsed_secs*1000 << " ms"<<std::endl;
+			std::cerr<<"Time elapsed  "<< elapsed_secs*1000 << " ms"<<std::endl<<std::endl;
+
+			std::cerr<<"Time vector  "<< std::endl;			
+			for(int i=0;i <time_vector.size();i++){
+				std::cerr<<time_vector[i]<< std::endl;			
+			}
 		}
 
 /////////////////////////
