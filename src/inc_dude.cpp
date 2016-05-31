@@ -218,6 +218,7 @@ class ROS_handler
 				}
 			}
 
+
 			// Decompose in several wrappers
 			vector<DuDe_OpenCV_wrapper> wrapper_vector(big_contours_map.size());
 			for(int i = 0; i <big_contours_map.size();i++){
