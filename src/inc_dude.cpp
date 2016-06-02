@@ -202,47 +202,85 @@ class ROS_handler
 			// multiple contours
 
 			vector<int> big_contours_map;// map to big contours
+			vector<vector<cv::Point> > big_contours_vector;
 			for(int i=0; i < Differential_contour.size(); i++){
 				float current_area = cv::contourArea(Differential_contour[i]);
 				if(current_area >gap*gap){
 					big_contours_map.push_back(i);	
+					big_contours_vector.push_back(Differential_contour[i]);
 				}
 			}
 			if(first_time) resize_rect = cv::boundingRect(Differential_contour[big_contours_map[0]]);
 			else resize_rect= previous_rect;
 
-
+			// Match between old and new
 			vector<vector<cv::Point> > connected_contours, unconnected_contours;
+			std::vector<cv::Point> unconnected_centroids;
 			vector< vector <int > > conection_prev_new;
 			for(int i=0;i < Stable.Region_contour.size();i++){
-				for(int j=0;j < big_contours_map.size();j++){
+				bool is_stable_connected = false;
+				for(int j=0;j < big_contours_vector.size();j++){
 					int connected = 0;
 					cv::Point centroid;
-					are_contours_connected(Stable.Region_contour[i], Differential_contour[big_contours_map[j] ], centroid, connected);
+					are_contours_connected(Stable.Region_contour[i], big_contours_vector[j] , centroid, connected);
 					if (connected>0){
 //							cout << "contour "<< j << " in region " <<i<< " is connected to stable region "<<k << endl;
 						vector <int> pair;
 						pair.push_back(i);
 						pair.push_back(j);
 						conection_prev_new.push_back(pair);
+						is_stable_connected = true;
 						cout << "Old contour " << i<<" connected to new "<< j << endl;
 					}
 				}
+				if(is_stable_connected == false){
+					unconnected_contours.push_back(Stable.Region_contour[i]);
+					unconnected_centroids.push_back(Stable.Region_centroid[i]);
+//					cout << "Old contour " << i<<" is not connected  "<< endl;
+				}
+			}
+			cout << "number of growing regions " << conection_prev_new.size() << endl;
+			
+			
+			
+			
+			//Draw image with expanded contours matched
+			cv::Mat expanded_drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+			for(int i=0; i < conection_prev_new.size();i++){
+				drawContours(expanded_drawing, Stable.Region_contour, conection_prev_new[i][0], 128, -1, 8);
+			}
+			for(int i=0; i < conection_prev_new.size();i++){
+				drawContours(expanded_drawing, Differential_contour, big_contours_map[conection_prev_new[i][1]] , 255, -1, 8);
 			}
 
+			will_be_destroyed = expanded_drawing.clone();			
+			std::vector<std::vector<cv::Point> > Appended_contour;
+			cv::findContours(will_be_destroyed, Appended_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
 
-			for (std::vector<vector<cv::Point> >::iterator it = Stable.Region_contour.begin() ; it != Stable.Region_contour.end(); ++it){
+			if(first_time){
+				Appended_contour.clear();
+				Appended_contour = big_contours_vector;
+			}
+
+			cout << "Appended_contour.size "<<Appended_contour.size()<< endl;
+/*
+ 			for (std::vector<vector<cv::Point> >::iterator it = Stable.Region_contour.begin() ; it != Stable.Region_contour.end(); ++it){
 				int a=2;
 			}
+*/
 
+			
+			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in Pre-Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 
 
 			// Decompose in several wrappers
-			vector<DuDe_OpenCV_wrapper> wrapper_vector(big_contours_map.size());
-			for(int i = 0; i <big_contours_map.size();i++){
+			begin_process = clock();
+
+			vector<DuDe_OpenCV_wrapper> wrapper_vector(Appended_contour.size());
+			for(int i = 0; i <Appended_contour.size();i++){
 				cv::Mat Temporal_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
 				cv::Mat temporal_image_cut = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
-				drawContours(Temporal_Image, Differential_contour, big_contours_map[i], 255, -1, 8);
+				drawContours(Temporal_Image, Appended_contour, i, 255, -1, 8);
 				working_image.copyTo(temporal_image_cut,Temporal_Image);
 				
 				wrapper_vector[i].set_pixel_Tau(pixel_Tau);			
@@ -253,13 +291,13 @@ class ROS_handler
 
 
 
-
+			cout << "unconnected centroids.size() "<< unconnected_centroids.size()<<endl;
 //			cout<<"Size of diferential: "<< Stable.Region_contour.size() << endl;
 
 		// Paint differential contours
 //			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
-			vector<vector<cv::Point> > joint_contours;
-			vector<cv::Point> joint_centroids;
+			vector<vector<cv::Point> > joint_contours = unconnected_contours;
+			vector<cv::Point> joint_centroids = unconnected_centroids;
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 //					drawContours(Drawing_Diff, wrapper_vector[i].Decomposed_contours, j, 255, -1, 8);
@@ -267,15 +305,14 @@ class ROS_handler
 					joint_centroids.push_back(wrapper_vector[i].contours_centroid[j]);
 				}
 			}	
+			
 
 			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process multiple Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
-
+			time_vector.push_back(elapsed_secs_process*1000);
 
 		////////////////////////////////////////////////////
 
-			
-			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process external Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
-
+/*
 	///////////////////////////////////
 	//// Graph Inter-Graphs
 			begin_process = clock();
@@ -344,9 +381,9 @@ class ROS_handler
 			for(int i=0; i < frontier_connections.size();i++){
 				cout << "contour "<< frontier_connections[i][3] << " is connected to frontier region "<< frontier_connections[i][2] <<endl;
 			}
-//*/
+/
 			end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process Inter Graph "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
-
+*/
 	///////////////////
 	//// Build stable graph
 				begin_process = clock();
@@ -361,8 +398,11 @@ class ROS_handler
 			}	
 //*/
 
+			Stable.Region_contour  = joint_contours;
+			Stable.Region_centroid = joint_centroids;
+
 			if(first_time){
-				Stable.Region_contour = joint_contours;
+//				Stable.Region_contour = joint_contours;
 				first_time=false;
 				previous_rect = resize_rect;
 			}
@@ -399,6 +439,11 @@ class ROS_handler
 			for(int i = 0; i <joint_contours.size();i++){
 				drawContours(Drawing2, joint_contours, i, i+1, -1, 8);
 			}	
+/*
+			for(int i=0; i < conection_prev_new.size();i++){
+				drawContours(Drawing2, Stable.Region_contour, conection_prev_new[i][0], joint_contours.size()+2, -1, 8);
+			}
+*/
 			cv::flip(Drawing2,Drawing2,0);
 			for(int i = 0; i <joint_contours.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
@@ -424,7 +469,9 @@ class ROS_handler
 //			grad = Drawing;
 //			grad = Glued_Image;
 //			grad = Drawing_Diff;
+//			grad = expanded_drawing;
 //			grad = stable_drawing;
+//			grad = working_image;
 
 //			grad = Occ_image;
 
