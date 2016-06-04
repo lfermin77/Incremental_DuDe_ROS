@@ -215,7 +215,7 @@ class ROS_handler
 
 			// Match between old and new
 			vector<vector<cv::Point> > connected_contours, unconnected_contours;
-			std::vector<cv::Point> unconnected_centroids;
+			std::vector<cv::Point> unconnected_centroids, connected_centroids;
 			vector< vector <int > > conection_prev_new;
 			for(int i=0;i < Stable.Region_contour.size();i++){
 				bool is_stable_connected = false;
@@ -236,22 +236,36 @@ class ROS_handler
 				if(is_stable_connected == false){
 					unconnected_contours.push_back(Stable.Region_contour[i]);
 					unconnected_centroids.push_back(Stable.Region_centroid[i]);
-//					cout << "Old contour " << i<<" is not connected  "<< endl;
+					cout << "Old contour " << i<<" is not connected  "<< endl;
+				}
+				else{
+					connected_contours.push_back(Stable.Region_contour[i]);
+					connected_centroids.push_back(Stable.Region_centroid[i]);
 				}
 			}
 			cout << "number of growing regions " << conection_prev_new.size() << endl;
+			cout << "connected_contours.size " << connected_contours.size() << endl;
+			cout << "unconnected_contours.size " << unconnected_contours.size() << endl;
+			cout << "Sum " << connected_contours.size() + unconnected_contours.size() << endl;
+			cout << "Original " << Stable.Region_contour.size() << endl;
 			
 			
 			
 			
 			//Draw image with expanded contours matched
 			cv::Mat expanded_drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
+			drawContours(expanded_drawing, connected_contours,  -1, 2, -1, 8);
+//			drawContours(expanded_drawing, big_contours_vector, -1, 255, -1, 8);	
+					
+			/*
 			for(int i=0; i < conection_prev_new.size();i++){
 				drawContours(expanded_drawing, Stable.Region_contour, conection_prev_new[i][0], 128, -1, 8);
-			}
+			}//*/
 			for(int i=0; i < conection_prev_new.size();i++){
-				drawContours(expanded_drawing, Differential_contour, big_contours_map[conection_prev_new[i][1]] , 255, -1, 8);
+				drawContours(expanded_drawing, big_contours_vector, conection_prev_new[i][1] , 2, -1, 8);
 			}
+
+
 
 			will_be_destroyed = expanded_drawing.clone();			
 			std::vector<std::vector<cv::Point> > Appended_contour;
@@ -281,7 +295,7 @@ class ROS_handler
 				cv::Mat Temporal_Image = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
 				cv::Mat temporal_image_cut = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);								
 				drawContours(Temporal_Image, Appended_contour, i, 255, -1, 8);
-				working_image.copyTo(temporal_image_cut,Temporal_Image);
+				image_cleaned.copyTo(temporal_image_cut,Temporal_Image);
 				
 				wrapper_vector[i].set_pixel_Tau(pixel_Tau);			
 				
@@ -298,6 +312,7 @@ class ROS_handler
 //			cv::Mat Drawing_Diff = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);
 			vector<vector<cv::Point> > joint_contours = unconnected_contours;
 			vector<cv::Point> joint_centroids = unconnected_centroids;
+			
 			for(int i = 0; i < wrapper_vector.size();i++){
 				for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
 //					drawContours(Drawing_Diff, wrapper_vector[i].Decomposed_contours, j, 255, -1, 8);
@@ -402,7 +417,8 @@ class ROS_handler
 			Stable.Region_centroid = joint_centroids;
 
 			if(first_time){
-//				Stable.Region_contour = joint_contours;
+				Stable.Region_contour  = joint_contours;
+				Stable.Region_centroid = joint_centroids;
 				first_time=false;
 				previous_rect = resize_rect;
 			}
@@ -416,7 +432,20 @@ class ROS_handler
 
 			cv::Mat Drawing = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			
-			DuDe_OpenCV_wrapper *wrapp_ptr;
+//			drawContours(Drawing, joint_contours, -1, 1, -1, 8);
+//			drawContours(Drawing, Appended_contour,  -1, 1, -1, 8);
+
+			//*
+			for(int i = 0; i <joint_contours.size();i++){
+				drawContours(Drawing, joint_contours, i, i+1, -1, 8);
+			}
+			//	*/
+			cv::flip(Drawing,Drawing,0);
+			for(int i = 0; i < joint_centroids.size();i++){
+				stringstream mix;      mix<<i;				std::string text = mix.str();
+				putText(Drawing, text, cv::Point(joint_centroids[i].x, Occ_image.size().height - joint_centroids[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, joint_centroids.size()+1, 1, 8);
+			}	
+
 
 //			wrapp_ptr= &convex_edge;
 //			wrapp_ptr= &wrapp;
@@ -432,25 +461,20 @@ class ROS_handler
 */
 
 
-			wrapp_ptr= &wrapp;
+//			wrapp_ptr= &wrapp;
 			cv::Mat Drawing2 = cv::Mat::zeros(Occ_image.size().height, Occ_image.size().width, CV_8UC1);	
 			
-			std::cout << "Decomposed_contours.size() "<< wrapp_ptr->Decomposed_contours.size() << std::endl;
-			for(int i = 0; i <joint_contours.size();i++){
-				drawContours(Drawing2, joint_contours, i, i+1, -1, 8);
+
+			for(int i = 0; i <unconnected_contours.size();i++){
+				drawContours(Drawing2, unconnected_contours, i, i+1, -1, 8);
 			}	
-/*
-			for(int i=0; i < conection_prev_new.size();i++){
-				drawContours(Drawing2, Stable.Region_contour, conection_prev_new[i][0], joint_contours.size()+2, -1, 8);
-			}
-*/
 			cv::flip(Drawing2,Drawing2,0);
-			for(int i = 0; i <joint_contours.size();i++){
+			for(int i = 0; i <unconnected_centroids.size();i++){
 				stringstream mix;      mix<<i;				std::string text = mix.str();
-				putText(Drawing2, text, cv::Point(joint_centroids[i].x, Occ_image.size().height - joint_centroids[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, joint_contours.size()+1, 1, 8);
+				putText(Drawing2, text, cv::Point(unconnected_centroids[i].x, Occ_image.size().height - unconnected_centroids[i].y ), cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, unconnected_centroids.size()+1, 1, 8);
 			}	
 
-
+			cv::flip(expanded_drawing,expanded_drawing,0);
 
 			
 	////////////////////////
@@ -459,7 +483,9 @@ class ROS_handler
 			resize_rect = resize_rect & Occ_Rect;
 			
 
-			cv::Mat croppedRef(Drawing + Drawing2, resize_rect);			
+//			cv::Mat croppedRef( Drawing2 + expanded_drawing, resize_rect);			
+//			cv::Mat croppedRef( Drawing2 + Drawing, resize_rect);			
+			cv::Mat croppedRef(Drawing , resize_rect);			
 			cv::Mat croppedImage;
 			croppedRef.copyTo(croppedImage);	
 			
