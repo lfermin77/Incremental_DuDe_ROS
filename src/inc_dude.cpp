@@ -87,6 +87,8 @@ class ROS_handler
 	cv::Mat Stable_Image;
 	Stable_graph Stable;
 	cv::Rect previous_rect;
+	
+	geometry_msgs::Pose current_origin_;
 
 	std::vector <float> time_vector;
 	
@@ -115,6 +117,10 @@ class ROS_handler
 			safety_distance = 1;
 			
 			first_time = true;
+			
+			current_origin_.position.x=0;
+			current_origin_.position.y=0;
+			current_origin_.position.z=0;
 			
 		}
 
@@ -162,6 +168,11 @@ class ROS_handler
 				map->info.height,
 				map->info.resolution);
 			 } 
+			 
+			 if( (map->info.origin.position.x != current_origin_.position.x) || (map->info.origin.position.y != current_origin_.position.y)){
+				 adjust_stable_contours();
+			 }
+			 
 			cv_ptr->header = map->header;
 			
 	///////////////////////////////////
@@ -705,8 +716,45 @@ class ROS_handler
 			centroid.y = acum.y/number_of_ones;
 		}
 		
+		void adjust_stable_contours(){
+			int a;
+			cout<<"Adjusting Contours "<< endl << endl;
+
+			cv::Point correction;
+			
+// considering constant resolution
+			correction.x = (current_origin_.position.x - Map_Info_.origin.position.x) / Map_Info_.resolution;
+			correction.y = (current_origin_.position.y - Map_Info_.origin.position.y) / Map_Info_.resolution;
+			
+			for(int i=0; i < Stable.Region_contour.size();i++){
+				Stable.Region_centroid[i] += correction;
+				for(int j=0; j < Stable.Region_contour[i].size();j++){
+					Stable.Region_contour[i][j] += correction;
+//					Stable.Region_contour[i][j] = cartesian_to_pixel(pixel_to_cartesian(Stable.Region_contour[i][j]));
+				}
+			}
+				
+			current_origin_ = Map_Info_.origin;
+			
+			
+		}
 		
+		cv::Point pixel_to_cartesian(cv::Point point_in){
+			cv::Point point_out;
+			point_out.x = point_in.x * Map_Info_.resolution + current_origin_.position.x;
+			point_out.y = point_in.y * Map_Info_.resolution + current_origin_.position.y;
+			
+			return point_out;
+		}
 		
+		cv::Point cartesian_to_pixel(cv::Point point_in){
+			cv::Point point_out;
+			point_out.x = (point_in.x - Map_Info_.origin.position.x) / Map_Info_.resolution ;
+			point_out.y = (point_in.y - Map_Info_.origin.position.y) / Map_Info_.resolution ;			
+			
+			
+			return point_out;
+		}
 };
 
 
