@@ -14,7 +14,6 @@
 
 //DuDe
 #include "wrapper.hpp"
-#include "Graph.hpp"
 
 
 class Stable_graph
@@ -148,9 +147,7 @@ class ROS_handler
 			DuDe_OpenCV_wrapper wrapp;
 			wrapp.set_Tau(Decomp_threshold_);
 			wrapp.set_pixel_Tau(pixel_Tau);
-				
-			Graph_Search Graph_searcher;
-			
+							
 			Map_Info_ = map-> info;						
 			clock_t begin = clock();
 			
@@ -498,170 +495,6 @@ class ROS_handler
 			markers_pub_.publish(marker);
 		}
 
-
-////////////////////////
-///////FRONTIER RELATED
-////////////////////////////////
-		void insert_DuDe_Graph(DuDe_OpenCV_wrapper  &wrapp, Graph_Search &Graph_searcher){
-			Graph_searcher.initialize_Graph(wrapp.contours_centroid.size());
-			for(int i=0;i<wrapp.contours_centroid.size();i++){
-				Graph_searcher.Graph_Node_List_[i].Node_Position_ = wrapp.contours_centroid[i];
-			}
-			for(int i=0;i<wrapp.diagonal_centroid.size();i++){			
-				int first  = *(wrapp.diagonal_connections[i].begin());
-				int second = *(wrapp.diagonal_connections[i].begin()++);
-				float distance = cv::norm(wrapp.contours_centroid[first] - wrapp.diagonal_centroid[i] ) + cv::norm(wrapp.contours_centroid[second] - wrapp.diagonal_centroid[i]);
-				
-				Graph_searcher.insert_edges(wrapp.diagonal_connections[i], distance, i);
-			}
-		}
-
-//////////////////////////////////
-		cv::Mat extract_frontier(cv::Mat Occ_Image, DuDe_OpenCV_wrapper  &wrapp, Graph_Search &Graph_searcher){
-			//Occupancy Image to Free Space	
-			std::cout << "Extracting Frontier..... ";
-//			cv::Mat thresholded_image = Occ_Image>210;
-			
-			cv::Mat open_space = Occ_Image<10;
-			cv::Mat black_image = Occ_Image>90 & Occ_Image<=100;		
-
-			cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
-				
-			cv::Mat Median_Image;
-			cv::medianBlur(open_space, Median_Image, 3);
-			cv::Mat Image_in = Median_Image & ~black_image;
-			 
-			cv::dilate(Median_Image, Median_Image, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
-			cv::Mat Frontier_Image = Median_Image & (~black_image & ~Image_in);	
-			cv::dilate(Frontier_Image, Frontier_Image, cv::Mat(), cv::Point(-1,-1), 3, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );
-			
-			std::cout << "done "<< std::endl;
-			// Result: Frontier Image and Image_in
-				
-		////////////////////////////////
-		//// Find Contours in Frontiers
-			cv::Mat Frontiers;
-			cv::Mat Drawing = cv::Mat::zeros(Occ_Image.size().height, Occ_Image.size().width, CV_8UC1);	
-			for(int i = 0; i <wrapp.contours_centroid.size();i++){
-				drawContours(Drawing, wrapp.Decomposed_contours, i, i+1, -1, 8);
-			}						
-			
-			Drawing.copyTo(Frontiers, Frontier_Image );
-			std::vector <std::pair<int, cv::Point > > frontier_Composite; 
-		//*
-			//frontier_Composite  = 
-//			Frontier_enumeration(Frontiers);	
-			Frontier_enumeration(Frontiers, frontier_Composite);	
-			std::cout << "Inserting Frontier..... ";
-			Graph_searcher.initialize_Frontier(frontier_Composite.size() );
-			for(int i=0;i<frontier_Composite.size();i++){
-				Graph_searcher.Frontier_Node_List_[i].Node_Position_ = frontier_Composite[i].second;
-			}
-			
-//*
-			for(int i=0;i<frontier_Composite.size();i++){
-				std::set<int> frontier_set;
-				frontier_set.insert(frontier_Composite[i].first);
-				frontier_set.insert(-(i+1));
-				
-				Graph_searcher.frontier_connected_.push_back(i);
-				float distance = cv::norm(frontier_Composite[i].second - wrapp.contours_centroid[frontier_Composite[i].first]) ;
-				Graph_searcher.insert_edges(frontier_set, distance , i);////////
-			}
-
-			// */
-			std::cout << "done "<< std::endl;
-			return Frontiers;
-		}
-
-///////////////////////////////////////
-		void Frontier_enumeration(cv::Mat colored_frontier_image,  std::vector <std::pair<int, cv::Point > > &  frontier_Composite){
-			//int a;
-			cv::Mat Frontiers;
-			colored_frontier_image.copyTo(Frontiers);
-			
-			std::vector<std::vector<cv::Point> > Frontier_contour;
-			cv::findContours(colored_frontier_image, Frontier_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
-		
-			
-			
-//			std::vector <std::pair<int, cv::Point > > frontier_Composite;
-			
-			for(int i=0; i <Frontier_contour.size();i++){
-				std::set<int> contours_set;
-				//Find number of different contours
-				for(int j=0; j<Frontier_contour[i].size();j++){
-					cv::Point pose = Frontier_contour[i][j];
-					int value = Frontiers.at<char>(pose.y, pose.x);
-					contours_set.insert(value);			
-				}
-		//		std::cout << "contours_set size "<<contours_set.size()<<std::endl;
-				//Create map between value and position in vector of vectors
-				std::vector<std::vector<cv::Point> > avg_vectors;
-				avg_vectors.resize(contours_set.size());
-				std::map<int,int> mapping_set;
-				int counter=0;
-				for(std::set<int>::iterator set_it = contours_set.begin(); set_it != contours_set.end();set_it++){
-					mapping_set.insert(std::pair<int,int>(*set_it, counter) );
-					counter++;
-				}
-		
-				//*
-				//Assign to different vectors accordingly
-				for(int j=0; j<Frontier_contour[i].size();j++){
-					cv::Point pose = Frontier_contour[i][j];
-					int value = Frontiers.at<char>(pose.y, pose.x);		
-					avg_vectors[ mapping_set[value]  ].push_back(pose);
-				}
-				//*		
-				//Extract Average
-				std::set<int>::iterator set_it = contours_set.begin();
-				for(int k=0;k<avg_vectors.size();k++){
-					cv::Point avg(0,0);
-					for(int m=0;m<avg_vectors[k].size();m++){
-						avg= avg + avg_vectors[k][m];
-					}
-					avg=cv::Point(avg.x/avg_vectors[k].size(), avg.y/avg_vectors[k].size() );
-					
-					std::pair<int, cv::Point > current_pair;
-					current_pair.first  = *set_it-1;
-					current_pair.second = avg;
-					frontier_Composite.push_back(current_pair);
-					set_it++;
-				}
-			}
-			
-		/*	
-			for(int i=0;i<frontier_Composite.size();i++){
-				std::cout << "frontier in contour "<<frontier_Composite[i].first << " located at " << frontier_Composite[i].second << std::endl;
-			}
-			//*/
-			
-//			return frontier_Composite;
-		
-		}
-
-//////////////////////////
-		int find_current_convex(DuDe_OpenCV_wrapper  &wrapp){
-			
-			robot_position_image_.x=  robot_position_[0] / Map_Info_.resolution;
-			robot_position_image_.y= -robot_position_[1] / Map_Info_.resolution;
-/*			
-			robot_position_image_.x=  -robot_position_[1] / Map_Info_.resolution;
-			robot_position_image_.y=   robot_position_[0] / Map_Info_.resolution;
-	//*/		
-			robot_position_image_.x += Map_Info_.height/2;
-			robot_position_image_.y += Map_Info_.width/2;
-			
-			int a=0;
-			for(int i=0;i<wrapp.Decomposed_contours.size();i++){
-				if(cv::pointPolygonTest(wrapp.Decomposed_contours[i], robot_position_image_, true) >= 0){
-					a = i;
-					std::cout <<"Inside convex number "<< i <<" located in "<<robot_position_image_ << std::endl;
-				}
-			}
-			return a;
-		}
 
 /////////////////////////
 //// UTILITY
