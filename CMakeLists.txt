@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(CGAL REQUIRED COMPONENTS Core)
 
 
+
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -154,7 +155,7 @@ include(${CGAL_USE_FILE})
 # )
 
 ######## dude_ros
-add_executable(inc_dude src/inc_dude.cpp include/Graph.cpp include/wrapper.cpp)
+add_executable(inc_dude src/inc_dude.cpp  include/wrapper.cpp)
 
 target_link_libraries(inc_dude
    ${catkin_LIBRARIES}

@@ -111,8 +111,8 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 
 //////////////////////
 // Extract graph and print it
-	extract_graph();
-	print_graph();
+//	extract_graph();
+//	print_graph();
 
 
 

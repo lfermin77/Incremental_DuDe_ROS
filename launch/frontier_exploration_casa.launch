@@ -3,7 +3,7 @@
 			<param name="use_sim_time" value="true" />
 
 	
-	<node pkg="stage_ros" type="stageros" name="stage_node" args="/home/unizar/ROS/hydro_catkin_ws/src/worlds/simple.world">
+	<node pkg="stage_ros" type="stageros" name="stage_node" args="/home/unizar/ROS/hydro_catkin_ws/src/worlds/simple_hospital.world">
 		<remap from="base_scan_1" to="scan"/>
 	</node>
 
