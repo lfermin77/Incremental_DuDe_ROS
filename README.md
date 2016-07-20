@@ -14,7 +14,7 @@ CGAL library: sudo apt-get install libcgal-dev
 
  [freeglut](http://freeglut.sourceforge.net/)
 
-
+mpfr
 
 
 ### What is this repository for? ###
