@@ -6,6 +6,16 @@ Branch of the work on-progress
 
 This README would normally document whatever steps are necessary to get your application up and running.
 
+### Pre requisites ###
+
+for Dual Space decomposition
+
+CGAL library: sudo apt-get install libcgal-dev
+freeglut * [Learn Markdown](http://freeglut.sourceforge.net/)
+
+
+
+
 ### What is this repository for? ###
 
 * Quick summary
