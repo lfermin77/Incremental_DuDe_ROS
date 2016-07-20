@@ -11,7 +11,8 @@ This README would normally document whatever steps are necessary to get your app
 for Dual Space decomposition
 
 CGAL library: sudo apt-get install libcgal-dev
-freeglut * [Learn Markdown](http://freeglut.sourceforge.net/)
+
+ [freeglut](http://freeglut.sourceforge.net/)
 
 
 
