@@ -26,10 +26,10 @@ endif
 # Choose a compiler & its options
 #--------------------------------------------------------------------------
 
-CXX      = g++
-LINK     = g++
+CXX      = gcc
+LINK     = gcc
 
-OPTS =  -fPIC -g -ansi -O3 -MMD -W -frounding-math -Wno-deprecated 
+OPTS =  -fPIC -g -ansi -O3 -MMD -W -frounding-math -Wno-deprecated -std=c++11 
 LDFLAGS      = -shared
 
 ifeq ($(PLATFORM),MAC_OS_X)
@@ -78,21 +78,21 @@ ifeq ($(PLATFORM),MAC_OS_X)
 else
 	CGAL_DIR = /usr/local
 	CGAL_INCL = -I$(CGAL_DIR)/include/CGAL
-	CGAL_LIB = -L$(CGAL_DIR)/lib -lCGAL -lpthread
+	CGAL_LIB = -L$(CGAL_DIR)/lib -lCGAL -lpthread -frounding-math
 endif
 
 
 #--------------------------------------------------------------------
 # Put all together
 #--------------------------------------------------------------------
-TARGET  = dude2d_nogl.so
+TARGET  = libdude2d.so
 SUBDIRS_GL = . src mathtool mpfrc++ $(CGAL_INCL) src/skeleton src/draw
 INCLUDE_GL = $(addprefix -I,$(SUBDIRS_GL)) $(TRI_INCL) $(MPFR_INCL)
 SRCS_GL=$(wildcard $(addsuffix /*.cpp,$(SUBDIRS_GL)))
 OBJS_GL=${SRCS_GL:.cpp=.o}
 LIB_GL = $(TRI_LIB) $(MK_LIB) $(MPFR_LIB) $(CGAL_LIB)
 
-CFLAGS_GL   = -DOPENGL_RENDER $(OPTS) $(INCLUDE_GL) 
+CFLAGS_GL   =  $(INCLUDE_GL) 
 CXXFLAGS_GL = $(CFLAGS_GL) 
 
 .PHONY: all
