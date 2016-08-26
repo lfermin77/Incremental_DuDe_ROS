@@ -4,9 +4,9 @@
 #include "nav_msgs/GetMap.h"
 #include "nav_msgs/Odometry.h"
 #include "visualization_msgs/MarkerArray.h"
+#include <cv_bridge/cv_bridge.h>
 
 //openCV
-#include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/imgproc/imgproc.hpp>
 
