@@ -68,6 +68,23 @@ add_dependencies(inc_dude ${catkin_LIBRARIES} ${CGAL_LIBRARIES})
 
 
 
+######## evaluation
+add_executable(evaluation src/evaluation.cpp  include/wrapper.cpp include/inc_decomp.cpp)
+
+target_link_libraries(evaluation
+   ${catkin_LIBRARIES}
+   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/libdude2d.so
+   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/FIST/FIST.lib
+   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/FIST/libFIST.linux64.a
+   ${CGAL_LIBRARIES} 
+   ${CGAL_3RD_PARTY_LIBRARIES}
+   ${MPFR_LIBRARIES}
+ )
+
+
+add_dependencies(evaluation ${catkin_LIBRARIES} ${CGAL_LIBRARIES})
+
+
 
 
 
