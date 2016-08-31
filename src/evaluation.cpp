@@ -8,7 +8,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/core/core.hpp>
 
 //DuDe
 #include "inc_decomp.hpp"
@@ -31,9 +30,7 @@ class ROS_handler
 	ros::Timer timer;
 			
 	float Decomp_threshold_;
-	Incremental_Decomposer inc_decomp;
-	Stable_graph Stable;
-
+	bool segmentation_ready;
 	std::vector <double> clean_time_vector, decomp_time_vector, paint_time_vector, complete_time_vector;
 
 	
@@ -41,9 +38,9 @@ class ROS_handler
 		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname),  it_(n), it2_(n), Decomp_threshold_(threshold)
 		{
 			ROS_INFO("Waiting for the map");
-//			map_sub_ = n.subscribe("map", 2, &ROS_handler::mapCallback, this); //mapname_ to include different name
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
-
+			segmentation_ready = false;
+			
 			image_pub_  = it_.advertise("/ground_truth_segmentation", 1);			
 			image_pub2_ = it_.advertise("/DuDe_segmentation",   1);			
 
@@ -53,7 +50,7 @@ class ROS_handler
 			cv_ptr2.reset (new cv_bridge::CvImage);
 			cv_ptr2->encoding = "mono8";
 			
-			read_file();
+			read_files();
 						
 		}
 
@@ -61,107 +58,10 @@ class ROS_handler
 /////////////////////////////	
 // ROS CALLBACKS			
 ////////////////////////////////		
-
-		void mapCallback(const nav_msgs::OccupancyGridConstPtr& map)
-		{
-			double begin_process, end_process, begin_whole, occupancy_time, decompose_time, drawPublish_time, whole_time;
-			begin_whole = begin_process = getTime();
-			
-			ROS_INFO("Received a %d X %d map @ %.3f m/pix", map->info.width, map->info.height, map->info.resolution);
-
-		///////////////////////Occupancy to clean image	
-			cv::Mat grad, img(map->info.height, map->info.width, CV_8U);
-			img.data = (unsigned char *)(&(map->data[0]) );
-			
-			float pixel_Tau = Decomp_threshold_ / map->info.resolution;				
-			cv_ptr->header = map->header;
-			cv::Point2f origin = cv::Point2f(map->info.origin.position.x, map->info.origin.position.y);
-
-			
-			cv::Rect first_rect = find_image_bounding_Rect(img); 
-			float rect_area = (first_rect.height)*(first_rect.width);
-			float img_area = (img.rows) * (img.cols);
-			cout <<"Area Ratio " <<  ( rect_area/img_area  )*100 <<"% "<< endl;
-			
-			cv::Mat cropped_img;
-			img(first_rect).copyTo(cropped_img); /////////// Cut the relevant image
-
-			cv::Mat black_image2, image_cleaned2 = clean_image2(cropped_img, black_image2);
-			
-			cv::Mat image_cleaned = cv::Mat::zeros(img.size(), CV_8UC1);
-			cv::Mat black_image   = cv::Mat::zeros(img.size(), CV_8UC1);
-			
-			image_cleaned2.copyTo(image_cleaned (first_rect));
-			black_image2.copyTo(black_image (first_rect));
-			
-			end_process = getTime();	occupancy_time = end_process - begin_process;
-
-
-
-
-		///////////////////////// Decompose Image
-			begin_process = getTime();
-			
-		    try{
-				Stable = inc_decomp.decompose_image(image_cleaned, pixel_Tau, origin, map->info.resolution);
-			}
-			catch (...)  {			}
-
-			
-			end_process = getTime();	decompose_time = end_process - begin_process;
-			
-		////////////Draw Image & publish
-		
-			begin_process = getTime();
-/*
-	//		cv::Mat croppedRef(Colored_Frontier, resize_rect);			
-			cv::flip(black_image, black_image,0);  cv::Mat big = Stable.draw_stable_contour() & ~black_image;
-
-			cout << "Rect "<< first_rect << endl;
-
-			big(first_rect).copyTo(grad);
-
-//*/	
-			
-			grad = Stable.draw_stable_contour();	
-
-			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
-//			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
-			grad.copyTo(cv_ptr->image);////most important
-
-			end_process = getTime();	drawPublish_time = end_process - begin_process;
-			whole_time = end_process - begin_whole;
-
-			/////// Time Measures
-			{
-				printf("Time: total %.0f, Classified: occ %.1f, Decomp %.1f, Draw %.1f \n", whole_time, occupancy_time, decompose_time, drawPublish_time);
-	
-	
-				clean_time_vector.push_back(occupancy_time);
-				decomp_time_vector.push_back(decompose_time);
-				paint_time_vector.push_back(drawPublish_time);
-				complete_time_vector.push_back(whole_time);
-				
-				cout << "Time Vector size "<< clean_time_vector.size() << endl;
-			}
-			
-
-/*
-			for(int i=0; i < clean_time_vector.size(); i++){
-//				cout << time_vector[i] << endl;
-				printf("%.0f %.0f %.0f %.0f \n", paint_time_vector[i], clean_time_vector[i],  decomp_time_vector[i] , complete_time_vector[i]);
-			}
-			//*/
-			
-		/////////////////////////	
-		}
-			
-
-/////////////////		
 		void metronomeCallback(const ros::TimerEvent&)
 		{
 //		  ROS_INFO("tic tac");
-		  publish_Image();
+		  if(segmentation_ready) publish_Image();
 		}
 
 
@@ -182,97 +82,101 @@ class ROS_handler
 /////////////////////////
 
 		typedef std::map <std::vector<int>, std::vector <cv::Point> > match2points;
+	//////////////////////
+		void read_files(){
+			cv::Mat image_GT, image_original;
+			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
+			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
 
-		cv::Mat clean_image(cv::Mat Occ_Image, cv::Mat &black_image){
-			//Occupancy Image to Free Space	
 			
-			cv::Mat valid_image = Occ_Image < 101;
-			std::vector<std::vector<cv::Point> > test_contour;
-			cv::findContours(valid_image, test_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
+			cv::Mat GT_segmentation = simple_segment(image_GT);
 
-			cv::Rect first_rect = cv::boundingRect(test_contour[0]);
-			for(int i=1; i < test_contour.size(); i++){
-				first_rect |= cv::boundingRect(test_contour[i]);
+			double begin_process, end_process, decompose_time;
+			begin_process = getTime();
+			
+			cv::Mat DuDe_segmentation = simple_segment(image_original);
+
+			end_process = getTime();	decompose_time = end_process - begin_process;			
+			std::cout << "Time to decompose " << decompose_time << std::endl;
+			
+			
+			
+			
+			match2points relations2points = compare_images(GT_segmentation, DuDe_segmentation);
+						
+			/////////////
+			cv::Mat to_publish = GT_segmentation;
+			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
+			to_publish.copyTo(cv_ptr->image);////most important
+			////////////
+			cv::Mat to_publish2 = DuDe_segmentation;
+			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
+			to_publish2.copyTo(cv_ptr2->image);////most important
+			///////////
+			
+			segmentation_ready = true;
+		}
+
+	/////////////////////
+		match2points compare_images(cv::Mat GT_segmentation_in, cv::Mat DuDe_segmentation_in){
+			match2points relation2points;
+			std::set <int> GT_tags, DuDe_tags;
+			
+			cv::Mat GT_segmentation   = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
+			cv::Mat DuDe_segmentation = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
+			
+			GT_segmentation_in  .convertTo(GT_segmentation, CV_8UC1);
+			DuDe_segmentation_in.convertTo(DuDe_segmentation, CV_8UC1);			
+			
+			for(int x=0; x < GT_segmentation.size().width; x++){
+				for(int y=0; y < GT_segmentation.size().height; y++){
+					
+					cv::Point current_pixel(x,y);
+					std::vector < int > relation;
+					
+					int tag_GT   = 0;
+					int DuDe_GT  = 0;
+					
+					tag_GT   = GT_segmentation.at<uchar>(current_pixel);
+					DuDe_GT  = DuDe_segmentation.at<uchar>(current_pixel);
+					
+					GT_tags.insert(tag_GT); 
+					DuDe_tags.insert(DuDe_GT);
+					
+					relation.push_back( tag_GT );
+					relation.push_back( DuDe_GT );
+
+					relation2points[relation].push_back(current_pixel);
+					
+//					std::cout << "GT Tags "<< GT_tag << std::endl;
+					
+				}
 			}
-			cv::Mat reduced_Image;
-			valid_image(first_rect).copyTo(reduced_Image);
 			
-			
-			cv::Mat open_space = reduced_Image<10;
-			black_image = reduced_Image>90 & reduced_Image<=100;		
-			cv::Mat Median_Image, out_image, temp_image ;
-			int filter_size=2;
-
-			cv::boxFilter(black_image, temp_image, -1, cv::Size(filter_size, filter_size), cv::Point(-1,-1), false, cv::BORDER_DEFAULT ); // filter open_space
-			black_image = temp_image > filter_size*filter_size/2;  // threshold in filtered
-			cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			// inflate obstacle
-
-			filter_size=10;
-			cv::boxFilter(open_space, temp_image, -1, cv::Size(filter_size, filter_size), cv::Point(-1,-1), false, cv::BORDER_DEFAULT ); // filter open_space
-			Median_Image = temp_image > filter_size*filter_size/2;  // threshold in filtered
-			Median_Image = Median_Image | open_space ;
-			//cv::medianBlur(Median_Image, Median_Image, 3);
-			cv::dilate(Median_Image, Median_Image,cv::Mat());
-
-			out_image = Median_Image & ~black_image;// Open space without obstacles
-
-
-
-
-			cv::Size image_size = Occ_Image.size();
-			cv::Mat image_out(image_size, CV_8UC1);
-			cv::Mat black_image_out(image_size, CV_8UC1) ; 
-
-			out_image.copyTo(image_out(first_rect));
-			
-			black_image.copyTo(black_image_out(first_rect));
-			black_image =black_image_out;
-
-			return image_out;
-		}
-
-
-		cv::Mat clean_image2(cv::Mat Occ_Image, cv::Mat &black_image){
-			//Occupancy Image to Free Space	
-			cv::Mat open_space = Occ_Image<10;
-			black_image = Occ_Image>90 & Occ_Image<=100;		
-			cv::Mat Median_Image, out_image, temp_image ;
-			int filter_size=2;
-
-			cv::boxFilter(black_image, temp_image, -1, cv::Size(filter_size, filter_size), cv::Point(-1,-1), false, cv::BORDER_DEFAULT ); // filter open_space
-			black_image = temp_image > filter_size*filter_size/2;  // threshold in filtered
-			cv::dilate(black_image, black_image, cv::Mat(), cv::Point(-1,-1), 4, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			// inflate obstacle
-
-			filter_size=10;
-			cv::boxFilter(open_space, temp_image, -1, cv::Size(filter_size, filter_size), cv::Point(-1,-1), false, cv::BORDER_DEFAULT ); // filter open_space
-			Median_Image = temp_image > filter_size*filter_size/2;  // threshold in filtered
-			Median_Image = Median_Image | open_space ;
-			//cv::medianBlur(Median_Image, Median_Image, 3);
-			cv::dilate(Median_Image, Median_Image,cv::Mat());
-
-			out_image = Median_Image & ~black_image;// Open space without obstacles
-
-			return out_image;
-		}
-
-		cv::Rect find_image_bounding_Rect(cv::Mat Occ_Image){
-			cv::Mat valid_image = Occ_Image < 101;
-			std::vector<std::vector<cv::Point> > test_contour;
-			cv::findContours(valid_image, test_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
-
-			cv::Rect first_rect = cv::boundingRect(test_contour[0]);
-			for(int i=1; i < test_contour.size(); i++){
-				first_rect |= cv::boundingRect(test_contour[i]);
+//*			
+			for( match2points::iterator it = relation2points.begin(); it!= relation2points.end(); it++ ){
+				std::vector < int > current_relation = it->first;
+				std::vector < cv::Point > current_points = it->second;
+				if(current_points.size() > (GT_segmentation.rows * GT_segmentation.rows)/100){
+					std::cout << "Relation ("<< current_relation[0] << "," << current_relation[1] << ") with " << current_points.size() << " points" << std::endl;
+				}
 			}
-			return first_rect;
+/*
+			for( std::set <int>::iterator it = GT_tags.begin(); it!= GT_tags.end(); it++ ){
+				std::cout << "GT Tags "<< *it << std::endl;
+			}
+			for( std::set <int>::iterator it = DuDe_tags.begin(); it!= DuDe_tags.end(); it++ ){
+				std::cout << "DuDe tags "<< *it << std::endl;
+			}
+			//*/
+			std::cout << "relation2points size "<< relation2points.size() << std::endl;
+			return relation2points;
 		}
 
+	///////////////////
 		void read_file(){
 			cv::Mat image_GT, image_original;
-//			image = cv::imread("image.png",0);   // Read the file
-//			image = cv::imread("maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
-//			image = cv::imread("/home/unizar/ROS_Indigo/catkin_ws/src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
-			image_original = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
+			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
 			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
 			
 			if(! image_original.data )                              // Check for invalid input
@@ -286,12 +190,15 @@ class ROS_handler
 			cv::Point2f origin(0,0);
 
 		/////////////////////////////////////// Decompose GT
+			Incremental_Decomposer inc_decomp;
+			Stable_graph Stable;
+			
 			cv::Mat pre_decompose = image_GT.clone();
 			cv::Mat pre_decompose_BW = pre_decompose > 250;
 
 			Stable = inc_decomp.decompose_image(pre_decompose_BW, 3.5, origin , 0.05);
 
-			cv::Mat GT_segmentation = Stable.draw_stable_contour();	
+			cv::Mat GT_segmentation = Stable.draw_stable_contour().clone();	
 		//////////////////////////////////////// Decompose Original
 			Incremental_Decomposer inc_decomp2;
 			Stable_graph Stable2;
@@ -301,7 +208,7 @@ class ROS_handler
 
 			Stable2 = inc_decomp2.decompose_image(pre_decompose2_BW, 3.5, origin , 0.05);
 
-			cv::Mat DuDe_segmentation = Stable2.draw_stable_contour();	
+			cv::Mat DuDe_segmentation = Stable2.draw_stable_contour().clone();	
 			
 			std::cout << "Decomposition DuDe     has "<< Stable2.Region_contour.size() << " tags"<<std::endl;
 			std::cout << "Decomposition Original has "<< Stable .Region_contour.size() << " tags"<<std::endl;
@@ -313,31 +220,35 @@ class ROS_handler
 			std::set <int> GT_tags, DuDe_tags;
 			for(int x=0; x < image_original.rows; x++){
 				for(int y=0; y < image_original.cols; y++){
-					cv::Point current_point(x,y);
+					
+					cv::Point current_pixel(x,y);
 					std::vector < int > relation;
 					
-					int GT_tag   = GT_segmentation.  at<uchar>(y,x);
-					int DuDe_tag = DuDe_segmentation.at<uchar>(y,x);
+					int tag_GT   = GT_segmentation.  at<uchar>(current_pixel);
+					int DuDe_GT  = DuDe_segmentation.at<uchar>(current_pixel);
 					
-					GT_tags.insert(GT_tag); 
-					DuDe_tags.insert(DuDe_tag);
+					GT_tags.insert(tag_GT); 
+//					DuDe_tags.insert(DuDe_GT);
 					
-					relation.push_back( GT_tag );
-					relation.push_back( DuDe_tag );
+					relation.push_back( tag_GT );
+					relation.push_back( DuDe_GT );
 
-					relation2points[relation].push_back(current_point);
+//					relation2points[relation].push_back(current_pixel);
 					
 //					std::cout << "GT Tags "<< GT_tag << std::endl;
 					
 				}
 			}
+			std::cout << "GT Tags size "  << GT_tags.size()   << std::endl;
+			std::cout << "DuDe_tags size "<< DuDe_tags.size() << std::endl;
 			
+//*			
 			for( match2points::iterator it = relation2points.begin(); it!= relation2points.end(); it++ ){
 				std::vector < int > current_relation = it->first;
 				std::vector < cv::Point > current_points = it->second;
 //				std::cout << "Relation ("<< current_relation[0] << "," << current_relation[1] << ") with " << current_points.size() << " points" << std::endl;
 			}
-/*
+
 			for( std::set <int>::iterator it = GT_tags.begin(); it!= GT_tags.end(); it++ ){
 				std::cout << "GT Tags "<< *it << std::endl;
 			}
@@ -346,19 +257,32 @@ class ROS_handler
 			}
 //*/
 
-			/////////////
-			cv::Mat to_publish = GT_segmentation;
-			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
-			to_publish.copyTo(cv_ptr->image);////most important
-			////////////
-			cv::Mat to_publish2 = pre_decompose2_BW;
-			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
-			to_publish2.copyTo(cv_ptr2->image);////most important
-			///////////
-			
-
 		}
+	////////////////////
+		cv::Mat simple_segment(cv::Mat image_in){
+			Incremental_Decomposer inc_decomp;
+			Stable_graph Stable;
+			cv::Point2f origin(0,0);
+			float resolution = 0.05;
 
+			
+			cv::Mat pre_decompose = image_in.clone();
+			cv::Mat pre_decompose_BW = pre_decompose > 250;
+
+			Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
+
+//			cv::Mat Segmentation = Stable.draw_stable_contour();
+			
+			cv::Mat Drawing = cv::Mat::zeros(image_in.size(), CV_8UC1);	
+			for(int i = 0; i < Stable.Region_contour.size();i++){
+				drawContours(Drawing, Stable.Region_contour, i, i+1, -1, 8);
+			}
+			std::cout << "Decomposition size: " << Stable.Region_contour.size() << std::endl;
+
+			return Drawing;
+		}
+	
+	////////////////////
 
 };
 
