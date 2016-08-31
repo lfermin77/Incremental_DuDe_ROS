@@ -21,10 +21,10 @@ class ROS_handler
 {
 	ros::NodeHandle n;
 	
-	image_transport::ImageTransport it_;
-	image_transport::Subscriber image_sub_;
-	image_transport::Publisher image_pub_;	
-	cv_bridge::CvImagePtr cv_ptr;
+	image_transport::ImageTransport it_, it2_;
+	image_transport::Subscriber image_sub_, image_sub2_;
+	image_transport::Publisher image_pub_, image_pub2_;	
+	cv_bridge::CvImagePtr cv_ptr, cv_ptr2;
 		
 	std::string mapname_;
 	ros::Subscriber map_sub_;	
@@ -38,15 +38,20 @@ class ROS_handler
 
 	
 	public:
-		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname),  it_(n), Decomp_threshold_(threshold)
+		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname),  it_(n), it2_(n), Decomp_threshold_(threshold)
 		{
 			ROS_INFO("Waiting for the map");
 //			map_sub_ = n.subscribe("map", 2, &ROS_handler::mapCallback, this); //mapname_ to include different name
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
 
-			image_pub_ = it_.advertise("/tagged_image", 1);			
+			image_pub_  = it_.advertise("/ground_truth_segmentation", 1);			
+			image_pub2_ = it_.advertise("/DuDe_segmentation",   1);			
+
 			cv_ptr.reset (new cv_bridge::CvImage);
 			cv_ptr->encoding = "mono8";
+
+			cv_ptr2.reset (new cv_bridge::CvImage);
+			cv_ptr2->encoding = "mono8";
 			
 			read_file();
 						
@@ -166,7 +171,8 @@ class ROS_handler
 // PUBLISHING METHODS		
 ////////////////////////////		
 		void publish_Image(){
-			image_pub_.publish(cv_ptr->toImageMsg());
+			image_pub_.publish (cv_ptr->toImageMsg());
+			image_pub2_.publish(cv_ptr2->toImageMsg());
 		}
 
 
@@ -174,6 +180,8 @@ class ROS_handler
 /////////////////////////
 //// UTILITY
 /////////////////////////
+
+		typedef std::map <std::vector<int>, std::vector <cv::Point> > match2points;
 
 		cv::Mat clean_image(cv::Mat Occ_Image, cv::Mat &black_image){
 			//Occupancy Image to Free Space	
@@ -260,40 +268,93 @@ class ROS_handler
 		}
 
 		void read_file(){
-			cv::Mat image;
+			cv::Mat image_GT, image_original;
 //			image = cv::imread("image.png",0);   // Read the file
 //			image = cv::imread("maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
 //			image = cv::imread("/home/unizar/ROS_Indigo/catkin_ws/src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
-//			image = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
-			image = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
+			image_original = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
+			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
 			
-			if(! image.data )                              // Check for invalid input
+			if(! image_original.data )                              // Check for invalid input
 		    {
 		        cout <<  "Could not open or find the image" << std::endl ;
 		    }
 			
-			std::cout << "Size: (" <<  image.rows <<" , "<<image.cols<<")" << std::endl;
-			std::cout << "Pixel Depth:" <<  image.depth() << std::endl;
+			std::cout << "Original:     (" <<  image_original.rows <<" , "<<image_original.cols<<")" << std::endl;
+			std::cout << "Ground Truth: (" <<  image_GT.rows <<" , "<<image_GT.cols<<")" << std::endl;
 
-			cv::Mat grad = image.clone();
-			cv::Mat pre_decompose = image.clone() > 220;
-
-			grad = grad > 220;
-			
 			cv::Point2f origin(0,0);
-		    try{
-				Stable = inc_decomp.decompose_image(pre_decompose, 3.5, origin , 0.05);
+
+		/////////////////////////////////////// Decompose GT
+			cv::Mat pre_decompose = image_GT.clone();
+			cv::Mat pre_decompose_BW = pre_decompose > 250;
+
+			Stable = inc_decomp.decompose_image(pre_decompose_BW, 3.5, origin , 0.05);
+
+			cv::Mat GT_segmentation = Stable.draw_stable_contour();	
+		//////////////////////////////////////// Decompose Original
+			Incremental_Decomposer inc_decomp2;
+			Stable_graph Stable2;
+
+			cv::Mat pre_decompose2 = image_original.clone() ;			
+			cv::Mat pre_decompose2_BW = pre_decompose2 > 250;			
+
+			Stable2 = inc_decomp2.decompose_image(pre_decompose2_BW, 3.5, origin , 0.05);
+
+			cv::Mat DuDe_segmentation = Stable2.draw_stable_contour();	
+			
+			std::cout << "Decomposition DuDe     has "<< Stable2.Region_contour.size() << " tags"<<std::endl;
+			std::cout << "Decomposition Original has "<< Stable .Region_contour.size() << " tags"<<std::endl;
+		/////////////////////////////////////
+
+//*
+
+			match2points relation2points;
+			std::set <int> GT_tags, DuDe_tags;
+			for(int x=0; x < image_original.rows; x++){
+				for(int y=0; y < image_original.cols; y++){
+					cv::Point current_point(x,y);
+					std::vector < int > relation;
+					
+					int GT_tag   = GT_segmentation.  at<uchar>(y,x);
+					int DuDe_tag = DuDe_segmentation.at<uchar>(y,x);
+					
+					GT_tags.insert(GT_tag); 
+					DuDe_tags.insert(DuDe_tag);
+					
+					relation.push_back( GT_tag );
+					relation.push_back( DuDe_tag );
+
+					relation2points[relation].push_back(current_point);
+					
+//					std::cout << "GT Tags "<< GT_tag << std::endl;
+					
+				}
 			}
-			catch (...)  {			}
+			
+			for( match2points::iterator it = relation2points.begin(); it!= relation2points.end(); it++ ){
+				std::vector < int > current_relation = it->first;
+				std::vector < cv::Point > current_points = it->second;
+//				std::cout << "Relation ("<< current_relation[0] << "," << current_relation[1] << ") with " << current_points.size() << " points" << std::endl;
+			}
+/*
+			for( std::set <int>::iterator it = GT_tags.begin(); it!= GT_tags.end(); it++ ){
+				std::cout << "GT Tags "<< *it << std::endl;
+			}
+			for( std::set <int>::iterator it = DuDe_tags.begin(); it!= DuDe_tags.end(); it++ ){
+				std::cout << "DuDe tags "<< *it << std::endl;
+			}
+//*/
 
-			grad = Stable.draw_stable_contour();	
-
-
-			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
-//			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
-			grad.copyTo(cv_ptr->image);////most important
-
-
+			/////////////
+			cv::Mat to_publish = GT_segmentation;
+			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
+			to_publish.copyTo(cv_ptr->image);////most important
+			////////////
+			cv::Mat to_publish2 = pre_decompose2_BW;
+			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
+			to_publish2.copyTo(cv_ptr2->image);////most important
+			///////////
 			
 
 		}
