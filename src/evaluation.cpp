@@ -60,8 +60,8 @@ class ROS_handler
 			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 			
 			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps";
-			gt_ending = "_scan_gt_segmentation.png";
-			FuT_ending ="_scan_furnitures_trashbins.png";
+			gt_ending = "_gt_segmentation.png";
+			FuT_ending ="_furnitures.png";
 
 			init();			//read_files();
 						
@@ -99,16 +99,6 @@ class ROS_handler
 	//////////////////////
 		void read_files(std::string name){
 			cv::Mat image_GT, image_original;
-			
-//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
-//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_furnitures_trashbins.png",0);   // Read the file
-//			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
-
-//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg101_scan_furnitures_trashbins.png",0);   // Read the file
-//			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg101_scan_gt_segmentation.png",0);   // Read the file
-
-//			std::string full_path_GT = base_path + "/" + "Freiburg101" + gt_ending;
-//			std::string full_path_original = base_path + "/" + "Freiburg101" + FuT_ending;
 
 			std::string full_path_GT       = base_path + "/" + name + gt_ending;
 			std::string full_path_original = base_path + "/" + name + FuT_ending;
@@ -128,7 +118,8 @@ class ROS_handler
 			std::cout << "Time to decompose " << decompose_time << std::endl;
 			Times.push_back(decompose_time);
 			
-			
+			std::string full_path_decomposed       = base_path + "/" + name + "_DuDe_segmented.png";
+//			cv::imwrite( full_path_decomposed , DuDe_segmentation );
 			
 			match2points relations2points = compare_images(GT_segmentation, DuDe_segmentation);
 						
@@ -273,11 +264,12 @@ class ROS_handler
 			std::vector<std::string> files_to_read = listFile();
 			
 //			read_files("Freiburg101");
-			read_files(files_to_read[7]);
+//			read_files(files_to_read[7]);
 			
 			std::cout << "Files listed  " << std::endl;			
 			for (int i=0; i < files_to_read.size() ; i++){
-				std::cout << "  "<< files_to_read[i] << std::endl;
+				std::cout << "Reading file  "<< files_to_read[i] << std::endl<< std::endl<< std::endl<< std::endl;
+				read_files(files_to_read[i]);
 			}
 			
 			//Print results
