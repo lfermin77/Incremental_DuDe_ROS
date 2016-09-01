@@ -82,10 +82,12 @@ class ROS_handler
 /////////////////////////
 
 		typedef std::map <std::vector<int>, std::vector <cv::Point> > match2points;
+		typedef std::map <int, std::vector <cv::Point> > tag2points;
 	//////////////////////
 		void read_files(){
 			cv::Mat image_GT, image_original;
-			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
+//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
+			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_furnitures_trashbins.png",0);   // Read the file
 			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
 
 			
@@ -120,7 +122,7 @@ class ROS_handler
 	/////////////////////
 		match2points compare_images(cv::Mat GT_segmentation_in, cv::Mat DuDe_segmentation_in){
 			match2points relation2points;
-			std::set <int> GT_tags, DuDe_tags;
+			tag2points GT_tag2points, DuDe_tag2points;
 			
 			cv::Mat GT_segmentation   = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
 			cv::Mat DuDe_segmentation = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
@@ -130,39 +132,42 @@ class ROS_handler
 			
 			for(int x=0; x < GT_segmentation.size().width; x++){
 				for(int y=0; y < GT_segmentation.size().height; y++){
-					
 					cv::Point current_pixel(x,y);
 					std::vector < int > relation;
+										
+					int tag_GT   = GT_segmentation.at<uchar>(current_pixel);
+					int tag_DuDe  = DuDe_segmentation.at<uchar>(current_pixel);
 					
-					int tag_GT   = 0;
-					int DuDe_GT  = 0;
-					
-					tag_GT   = GT_segmentation.at<uchar>(current_pixel);
-					DuDe_GT  = DuDe_segmentation.at<uchar>(current_pixel);
-					
-					GT_tags.insert(tag_GT); 
-					DuDe_tags.insert(DuDe_GT);
-					
-					relation.push_back( tag_GT );
-					relation.push_back( DuDe_GT );
-
-					relation2points[relation].push_back(current_pixel);
-					
-//					std::cout << "GT Tags "<< GT_tag << std::endl;
-					
+					if(tag_DuDe>0){
+						relation.push_back( tag_GT );
+						relation.push_back( tag_DuDe );
+	
+						relation2points[relation].push_back(current_pixel);					
+						GT_tag2points  [tag_GT].push_back(current_pixel);
+						DuDe_tag2points[tag_DuDe].push_back(current_pixel);
+					}
 				}
 			}
 			
-//*			
+
+
 			for( match2points::iterator it = relation2points.begin(); it!= relation2points.end(); it++ ){
 				std::vector < int > current_relation = it->first;
 				std::vector < cv::Point > current_points = it->second;
+				
 				if(current_points.size() > (GT_segmentation.rows * GT_segmentation.rows)/100){
+					int points_in_GT, points_in_DuDe, points_in_both;
+					
+					points_in_GT = GT_tag2points[current_relation[0]].size();
+					points_in_DuDe = DuDe_tag2points[current_relation[1]].size();
+					points_in_both = current_points.size();
+					
 					std::cout << "Relation ("<< current_relation[0] << "," << current_relation[1] << ") with " << current_points.size() << " points" << std::endl;
+					std::cout << "   Precision: "<<  100*points_in_both/points_in_GT << "%, Recall: " << 100*points_in_both/points_in_DuDe<<"% " << std::endl;
 				}
 			}
-/*
-			for( std::set <int>::iterator it = GT_tags.begin(); it!= GT_tags.end(); it++ ){
+			 /*
+			for( tag2points::iterator it = GT_tag2points.begin(); it!= GT_tag2points.end(); it++ ){
 				std::cout << "GT Tags "<< *it << std::endl;
 			}
 			for( std::set <int>::iterator it = DuDe_tags.begin(); it!= DuDe_tags.end(); it++ ){
