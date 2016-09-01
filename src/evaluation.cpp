@@ -1,6 +1,7 @@
 //ROS
 #include "ros/ros.h"
 #include "nav_msgs/GetMap.h"
+#include "geometry_msgs/Twist.h"
 
 //openCV
 #include <cv_bridge/cv_bridge.h>
@@ -27,6 +28,7 @@ class ROS_handler
 	cv_bridge::CvImagePtr cv_ptr, cv_ptr2;
 		
 	ros::Timer timer;
+	ros::Subscriber twist_sub_;	
 			
 	float Decomp_threshold_;
 	bool segmentation_ready;
@@ -40,12 +42,14 @@ class ROS_handler
 	std::vector < std::vector<float> > Recalls;
 	std::vector<double> Times;
 
+	int current_file;
 	
 	public:
 		ROS_handler( float threshold) :   it_(n), it2_(n), Decomp_threshold_(threshold)
 		{
 			ROS_INFO("Waiting for the map");
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
+			twist_sub_ = n.subscribe("cmd_vel", 2, &ROS_handler::twistCallback, this);
 			segmentation_ready = false;
 			
 			image_pub_  = it_.advertise("/ground_truth_segmentation", 1);			
@@ -63,7 +67,8 @@ class ROS_handler
 			gt_ending = "_gt_segmentation.png";
 			FuT_ending ="_furnitures.png";
 
-			init();			//read_files();
+			current_file=0;
+//			init();			//read_files();
 						
 		}
 
@@ -75,6 +80,36 @@ class ROS_handler
 		{
 //		  ROS_INFO("tic tac");
 		  if(segmentation_ready) publish_Image();
+		}
+
+
+		void twistCallback(const geometry_msgs::Twist& msg)
+		{
+//		  ROS_INFO("tic tac");
+			std::vector<std::string> files_to_read = listFile();
+			
+//			read_files("Freiburg101");
+//			read_files(files_to_read[7]);
+			
+//			std::cout << "Files listed  " << std::endl;			
+			std::cout << "Reading file  "<< files_to_read[current_file] << std::endl<< std::endl;
+			read_files(files_to_read[current_file]);
+			current_file++;
+			
+			std::cout << "Processed file  "<< files_to_read[current_file] << std::endl<< std::endl;
+			//Print results
+			std::cout << "Results  " << std::endl;
+			float cum_precision=0;
+			float cum_recall=0;
+			int size=0;
+			for(int i=0; i < Precisions.size();i++){
+				for(int j=0; j < Precisions[i].size();j++){
+					cum_precision += Precisions[i][j];
+					cum_recall    += Recalls[i][j];
+					size++;
+				}
+			}			
+			std::cout << "Average Precision: "<<  cum_precision/size  << ", Average Recall: "<<  cum_recall/size << std::endl;
 		}
 
 
