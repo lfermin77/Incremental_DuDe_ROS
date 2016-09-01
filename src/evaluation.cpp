@@ -13,7 +13,8 @@
 #include "inc_decomp.hpp"
 
 
-
+//cpp
+#include <dirent.h>
 
 
 class ROS_handler
@@ -25,17 +26,23 @@ class ROS_handler
 	image_transport::Publisher image_pub_, image_pub2_;	
 	cv_bridge::CvImagePtr cv_ptr, cv_ptr2;
 		
-	std::string mapname_;
-	ros::Subscriber map_sub_;	
 	ros::Timer timer;
 			
 	float Decomp_threshold_;
 	bool segmentation_ready;
 	std::vector <double> clean_time_vector, decomp_time_vector, paint_time_vector, complete_time_vector;
+	
+	std::string  base_path;
+	std::string gt_ending;
+	std::string FuT_ending;
+	
+	std::vector < std::vector<float> > Precisions;
+	std::vector < std::vector<float> > Recalls;
+	std::vector<double> Times;
 
 	
 	public:
-		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname),  it_(n), it2_(n), Decomp_threshold_(threshold)
+		ROS_handler( float threshold) :   it_(n), it2_(n), Decomp_threshold_(threshold)
 		{
 			ROS_INFO("Waiting for the map");
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
@@ -45,12 +52,18 @@ class ROS_handler
 			image_pub2_ = it_.advertise("/DuDe_segmentation",   1);			
 
 			cv_ptr.reset (new cv_bridge::CvImage);
-			cv_ptr->encoding = "mono8";
+			//cv_ptr->encoding = "mono8";
+			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 
 			cv_ptr2.reset (new cv_bridge::CvImage);
-			cv_ptr2->encoding = "mono8";
+			//cv_ptr2->encoding = "mono8";
+			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 			
-			read_files();
+			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps";
+			gt_ending = "_scan_gt_segmentation.png";
+			FuT_ending ="_scan_furnitures_trashbins.png";
+
+			init();			//read_files();
 						
 		}
 
@@ -84,23 +97,36 @@ class ROS_handler
 		typedef std::map <std::vector<int>, std::vector <cv::Point> > match2points;
 		typedef std::map <int, std::vector <cv::Point> > tag2points;
 	//////////////////////
-		void read_files(){
+		void read_files(std::string name){
 			cv::Mat image_GT, image_original;
-//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
-			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_furnitures_trashbins.png",0);   // Read the file
-			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
-
 			
-			cv::Mat GT_segmentation = simple_segment(image_GT);
+//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
+//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_furnitures_trashbins.png",0);   // Read the file
+//			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
+
+//			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg101_scan_furnitures_trashbins.png",0);   // Read the file
+//			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg101_scan_gt_segmentation.png",0);   // Read the file
+
+//			std::string full_path_GT = base_path + "/" + "Freiburg101" + gt_ending;
+//			std::string full_path_original = base_path + "/" + "Freiburg101" + FuT_ending;
+
+			std::string full_path_GT       = base_path + "/" + name + gt_ending;
+			std::string full_path_original = base_path + "/" + name + FuT_ending;
+
+			image_original    = cv::imread(full_path_original,0);   // Read the file
+			image_GT          = cv::imread(full_path_GT,0);   // Read the file
+
+
+			cv::Mat GT_segmentation = simple_segment(image_GT, false);
 
 			double begin_process, end_process, decompose_time;
 			begin_process = getTime();
 			
-			cv::Mat DuDe_segmentation = simple_segment(image_original);
+			cv::Mat DuDe_segmentation = simple_segment(image_original, true);
 
 			end_process = getTime();	decompose_time = end_process - begin_process;			
 			std::cout << "Time to decompose " << decompose_time << std::endl;
-			
+			Times.push_back(decompose_time);
 			
 			
 			
@@ -117,6 +143,7 @@ class ROS_handler
 			///////////
 			
 			segmentation_ready = true;
+
 		}
 
 	/////////////////////
@@ -150,9 +177,9 @@ class ROS_handler
 			}
 			
 
-
+			std::vector<float> precisions_inside, recalls_inside;
 			for( match2points::iterator it = relation2points.begin(); it!= relation2points.end(); it++ ){
-				std::vector < int > current_relation = it->first;
+				std::vector < int >     current_relation = it->first;
 				std::vector < cv::Point > current_points = it->second;
 				
 				if(current_points.size() > (GT_segmentation.rows * GT_segmentation.rows)/100){
@@ -164,8 +191,14 @@ class ROS_handler
 					
 					std::cout << "Relation ("<< current_relation[0] << "," << current_relation[1] << ") with " << current_points.size() << " points" << std::endl;
 					std::cout << "   Precision: "<<  100*points_in_both/points_in_GT << "%, Recall: " << 100*points_in_both/points_in_DuDe<<"% " << std::endl;
+					precisions_inside.push_back(100*points_in_both/points_in_GT);
+					recalls_inside   .push_back(100*points_in_both/points_in_DuDe);
 				}
 			}
+			
+			Precisions.push_back(precisions_inside);
+			Recalls.push_back   (recalls_inside);
+			
 			 /*
 			for( tag2points::iterator it = GT_tag2points.begin(); it!= GT_tag2points.end(); it++ ){
 				std::cout << "GT Tags "<< *it << std::endl;
@@ -174,97 +207,12 @@ class ROS_handler
 				std::cout << "DuDe tags "<< *it << std::endl;
 			}
 			//*/
-			std::cout << "relation2points size "<< relation2points.size() << std::endl;
+//			std::cout << "relation2points size "<< relation2points.size() << std::endl;
 			return relation2points;
 		}
 
-	///////////////////
-		void read_file(){
-			cv::Mat image_GT, image_original;
-			image_original    = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan.png",0);   // Read the file
-			image_GT          = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps/Freiburg52_scan_gt_segmentation.png",0);   // Read the file
-			
-			if(! image_original.data )                              // Check for invalid input
-		    {
-		        cout <<  "Could not open or find the image" << std::endl ;
-		    }
-			
-			std::cout << "Original:     (" <<  image_original.rows <<" , "<<image_original.cols<<")" << std::endl;
-			std::cout << "Ground Truth: (" <<  image_GT.rows <<" , "<<image_GT.cols<<")" << std::endl;
-
-			cv::Point2f origin(0,0);
-
-		/////////////////////////////////////// Decompose GT
-			Incremental_Decomposer inc_decomp;
-			Stable_graph Stable;
-			
-			cv::Mat pre_decompose = image_GT.clone();
-			cv::Mat pre_decompose_BW = pre_decompose > 250;
-
-			Stable = inc_decomp.decompose_image(pre_decompose_BW, 3.5, origin , 0.05);
-
-			cv::Mat GT_segmentation = Stable.draw_stable_contour().clone();	
-		//////////////////////////////////////// Decompose Original
-			Incremental_Decomposer inc_decomp2;
-			Stable_graph Stable2;
-
-			cv::Mat pre_decompose2 = image_original.clone() ;			
-			cv::Mat pre_decompose2_BW = pre_decompose2 > 250;			
-
-			Stable2 = inc_decomp2.decompose_image(pre_decompose2_BW, 3.5, origin , 0.05);
-
-			cv::Mat DuDe_segmentation = Stable2.draw_stable_contour().clone();	
-			
-			std::cout << "Decomposition DuDe     has "<< Stable2.Region_contour.size() << " tags"<<std::endl;
-			std::cout << "Decomposition Original has "<< Stable .Region_contour.size() << " tags"<<std::endl;
-		/////////////////////////////////////
-
-//*
-
-			match2points relation2points;
-			std::set <int> GT_tags, DuDe_tags;
-			for(int x=0; x < image_original.rows; x++){
-				for(int y=0; y < image_original.cols; y++){
-					
-					cv::Point current_pixel(x,y);
-					std::vector < int > relation;
-					
-					int tag_GT   = GT_segmentation.  at<uchar>(current_pixel);
-					int DuDe_GT  = DuDe_segmentation.at<uchar>(current_pixel);
-					
-					GT_tags.insert(tag_GT); 
-//					DuDe_tags.insert(DuDe_GT);
-					
-					relation.push_back( tag_GT );
-					relation.push_back( DuDe_GT );
-
-//					relation2points[relation].push_back(current_pixel);
-					
-//					std::cout << "GT Tags "<< GT_tag << std::endl;
-					
-				}
-			}
-			std::cout << "GT Tags size "  << GT_tags.size()   << std::endl;
-			std::cout << "DuDe_tags size "<< DuDe_tags.size() << std::endl;
-			
-//*			
-			for( match2points::iterator it = relation2points.begin(); it!= relation2points.end(); it++ ){
-				std::vector < int > current_relation = it->first;
-				std::vector < cv::Point > current_points = it->second;
-//				std::cout << "Relation ("<< current_relation[0] << "," << current_relation[1] << ") with " << current_points.size() << " points" << std::endl;
-			}
-
-			for( std::set <int>::iterator it = GT_tags.begin(); it!= GT_tags.end(); it++ ){
-				std::cout << "GT Tags "<< *it << std::endl;
-			}
-			for( std::set <int>::iterator it = DuDe_tags.begin(); it!= DuDe_tags.end(); it++ ){
-				std::cout << "DuDe tags "<< *it << std::endl;
-			}
-//*/
-
-		}
 	////////////////////
-		cv::Mat simple_segment(cv::Mat image_in){
+		cv::Mat simple_segment(cv::Mat image_in, bool segment){
 			Incremental_Decomposer inc_decomp;
 			Stable_graph Stable;
 			cv::Point2f origin(0,0);
@@ -274,7 +222,13 @@ class ROS_handler
 			cv::Mat pre_decompose = image_in.clone();
 			cv::Mat pre_decompose_BW = pre_decompose > 250;
 
-			Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
+			if(segment){
+				Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
+			}
+			else{
+				Stable = inc_decomp.decompose_image(pre_decompose_BW, 100/resolution, origin , resolution);
+			}
+				
 
 //			cv::Mat Segmentation = Stable.draw_stable_contour();
 			
@@ -288,6 +242,61 @@ class ROS_handler
 		}
 	
 	////////////////////
+
+
+		std::vector<std::string> listFile(){
+	        DIR *pDIR;
+	        struct dirent *entry;
+			std::vector<std::string> files_to_read;
+
+	        if( pDIR=opendir(base_path.c_str()) ){
+				while(entry = readdir(pDIR)){
+					if( strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0 ){
+						std::string const fullString = entry->d_name;
+
+						if (fullString.length() >= gt_ending.length()) {
+							if (0 == fullString.compare (fullString.length() - gt_ending.length(), gt_ending.length(), gt_ending)){
+								std::string filename= fullString.substr (0,fullString.length() - gt_ending.length());
+								files_to_read.push_back(filename);
+//								std::cout << filename << "\n";
+							}
+						}
+					}
+				}
+				closedir(pDIR);
+	        }
+			std::cout << "Files size "<< files_to_read.size() << std::endl;
+			return files_to_read;
+		}
+
+		void init(){
+			std::vector<std::string> files_to_read = listFile();
+			
+//			read_files("Freiburg101");
+			read_files(files_to_read[7]);
+			
+			std::cout << "Files listed  " << std::endl;			
+			for (int i=0; i < files_to_read.size() ; i++){
+				std::cout << "  "<< files_to_read[i] << std::endl;
+			}
+			
+			//Print results
+			std::cout << "Results  " << std::endl;
+			float cum_precision=0;
+			float cum_recall=0;
+			int size=0;
+			for(int i=0; i < Precisions.size();i++){
+				for(int j=0; j < Precisions[i].size();j++){
+					cum_precision += Precisions[i][j];
+					cum_recall    += Recalls[i][j];
+					size++;
+				}
+			}			
+			std::cout << "Average Precision: "<<  cum_precision/size  << ", Average Recall: "<<  cum_recall/size << std::endl;
+			
+		}
+
+
 
 };
 
@@ -305,12 +314,11 @@ int main(int argc, char **argv)
 	
 	ros::init(argc, argv, "evaluation");
 	
-	std::string mapname = "map";
 	
 	float decomp_th=3;
 	if (argc ==2){ decomp_th = atof(argv[1]); }	
 	
-	ROS_handler mg(mapname, decomp_th);
+	ROS_handler mg(decomp_th);
 	ros::spin();
 	
 	return 0;
