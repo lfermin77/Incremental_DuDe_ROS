@@ -63,12 +63,15 @@ class ROS_handler
 			//cv_ptr2->encoding = "mono8";
 			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 			
-			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps";
+//			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps";
+//			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/nested_maps";
+			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
+//			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/bad_maps";
 			gt_ending = "_gt_segmentation.png";
 			FuT_ending ="_furnitures.png";
 
 			current_file=0;
-//			init();			//read_files();
+			init();			//read_files();
 						
 		}
 
@@ -88,31 +91,97 @@ class ROS_handler
 //		  ROS_INFO("tic tac");
 			std::vector<std::string> files_to_read = listFile();
 			
-//			read_files("Freiburg101");
-//			read_files(files_to_read[7]);
-			
+
 //			std::cout << "Files listed  " << std::endl;			
-			std::cout << "Reading file  "<< files_to_read[current_file] << std::endl<< std::endl;
-			read_files(files_to_read[current_file]);
-			current_file++;
+			if(current_file < files_to_read.size()){
+				std::cout << "Reading file  "<< files_to_read[current_file] << std::endl<< std::endl;
+				read_files(files_to_read[current_file]);
+
+				
+				std::cout << "Processed file  "<< files_to_read[current_file] << std::endl<< std::endl;
+				//Print results
+				std::cout << "Results  " << std::endl;
+				float cum_precision=0;
+				float cum_recall=0;
+				int size_precision=0, size_recall=0;
+				for(int i=0; i < Precisions.size();i++){
+					for(int j=0; j < Precisions[i].size();j++){
+						cum_precision += Precisions[i][j];
+						size_precision++;
+					}
+				}			
+				for(int i=0; i < Recalls.size();i++){
+					for(int j=0; j < Recalls[i].size();j++){
+						cum_recall    += Recalls[i][j];
+						size_recall++;
+					}
+				}			
+				std::cout << "Average Precision: "<<  cum_precision/size_precision  << ", Average Recall: "<<  cum_recall/size_recall << std::endl;
+				current_file++;
+			}
 			
-			std::cout << "Processed file  "<< files_to_read[current_file] << std::endl<< std::endl;
-			//Print results
-			std::cout << "Results  " << std::endl;
-			float cum_precision=0;
-			float cum_recall=0;
-			int size=0;
-			for(int i=0; i < Precisions.size();i++){
-				for(int j=0; j < Precisions[i].size();j++){
-					cum_precision += Precisions[i][j];
-					cum_recall    += Recalls[i][j];
-					size++;
-				}
-			}			
-			std::cout << "Average Precision: "<<  cum_precision/size  << ", Average Recall: "<<  cum_recall/size << std::endl;
+			else{
+				std::cout << "All files processed " << std::endl;
+				std::cout << "Final Results " << std::endl;
+				float cum_precision=0;
+				float cum_recall=0;
+				int size_precision=0, size_recall=0;
+				for(int i=0; i < Precisions.size();i++){
+					for(int j=0; j < Precisions[i].size();j++){
+						cum_precision += Precisions[i][j];
+						size_precision++;
+					}
+				}			
+				for(int i=0; i < Recalls.size();i++){
+					for(int j=0; j < Recalls[i].size();j++){
+						cum_recall    += Recalls[i][j];
+						size_recall++;
+					}
+				}			
+				std::cout << "Average Precision: "<<  cum_precision/size_precision  << ", Average Recall: "<<  cum_recall/size_recall << std::endl;
+			}
+						
 		}
 
 
+
+		void twistCallback2(const geometry_msgs::Twist& msg)
+		{
+//			cv::Mat image_GT_BW     = cv::imread("src/Incremental_DuDe_ROS/maps/Room_Segmentation/nested_maps/lab_intel_gt_segmentation.png",0);   // Read the file
+//			cv::Mat image_GT_tagged = segment_Ground_Truth(image_GT_BW);
+			
+			
+			std::vector<std::string> files_to_read = listFile();
+			
+
+//			std::cout << "Files listed  " << std::endl;			
+			if(current_file < files_to_read.size()){
+				std::cout << "Reading file  "<< files_to_read[current_file] << std::endl<< std::endl;
+
+				std::string full_path_original = base_path + "/" + files_to_read[current_file] + gt_ending;
+				cv::Mat image_GT_BW    = cv::imread(full_path_original,0);   // Read the file
+				cv::Mat image_GT_tagged = segment_Ground_Truth(image_GT_BW);
+
+				
+				/////////////
+				cv::Mat to_publish = (image_GT_BW > 250);
+				cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
+				to_publish.copyTo(cv_ptr->image);////most important
+				////////////
+				cv::Mat to_publish2 = image_GT_tagged.clone();
+				cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
+				to_publish2.copyTo(cv_ptr2->image);////most important
+				///////////
+				
+				segmentation_ready = true;
+				current_file++;
+			}
+//*/			
+			
+			
+			
+			
+		}
 
 
 ////////////////////////
@@ -131,6 +200,7 @@ class ROS_handler
 
 		typedef std::map <std::vector<int>, std::vector <cv::Point> > match2points;
 		typedef std::map <int, std::vector <cv::Point> > tag2points;
+		typedef std::map <int, tag2points> tag2tagMapper;
 	//////////////////////
 		void read_files(std::string name){
 			cv::Mat image_GT, image_original;
@@ -142,12 +212,13 @@ class ROS_handler
 			image_GT          = cv::imread(full_path_GT,0);   // Read the file
 
 
-			cv::Mat GT_segmentation = simple_segment(image_GT, false);
+			cv::Mat GT_segmentation = segment_Ground_Truth(image_GT);
+//			cv::Mat GT_segmentation = simple_segment(image_GT);
 
 			double begin_process, end_process, decompose_time;
 			begin_process = getTime();
 			
-			cv::Mat DuDe_segmentation = simple_segment(image_original, true);
+			cv::Mat DuDe_segmentation = simple_segment(image_original);
 
 			end_process = getTime();	decompose_time = end_process - begin_process;			
 			std::cout << "Time to decompose " << decompose_time << std::endl;
@@ -156,14 +227,16 @@ class ROS_handler
 			std::string full_path_decomposed       = base_path + "/" + name + "_DuDe_segmented.png";
 //			cv::imwrite( full_path_decomposed , DuDe_segmentation );
 			
-			match2points relations2points = compare_images(GT_segmentation, DuDe_segmentation);
+
+			compare_images(GT_segmentation, DuDe_segmentation);
+			
 						
 			/////////////
-			cv::Mat to_publish = GT_segmentation;
+			cv::Mat to_publish = GT_segmentation.clone();
 			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
 			to_publish.copyTo(cv_ptr->image);////most important
 			////////////
-			cv::Mat to_publish2 = DuDe_segmentation;
+			cv::Mat to_publish2 = DuDe_segmentation.clone();
 			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
 			to_publish2.copyTo(cv_ptr2->image);////most important
 			///////////
@@ -173,72 +246,67 @@ class ROS_handler
 		}
 
 	/////////////////////
-		match2points compare_images(cv::Mat GT_segmentation_in, cv::Mat DuDe_segmentation_in){
-			match2points relation2points;
-			tag2points GT_tag2points, DuDe_tag2points;
+		void compare_images(cv::Mat GT_segmentation_in, cv::Mat DuDe_segmentation_in){
 			
 			cv::Mat GT_segmentation   = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
 			cv::Mat DuDe_segmentation = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
 			
 			GT_segmentation_in  .convertTo(GT_segmentation, CV_8UC1);
 			DuDe_segmentation_in.convertTo(DuDe_segmentation, CV_8UC1);			
+			tag2tagMapper gt_tag2mapper,DuDe_tag2mapper;
 			
 			for(int x=0; x < GT_segmentation.size().width; x++){
 				for(int y=0; y < GT_segmentation.size().height; y++){
 					cv::Point current_pixel(x,y);
-					std::vector < int > relation;
 										
 					int tag_GT   = GT_segmentation.at<uchar>(current_pixel);
 					int tag_DuDe  = DuDe_segmentation.at<uchar>(current_pixel);
 					
-					if(tag_DuDe>0){
-						relation.push_back( tag_GT );
-						relation.push_back( tag_DuDe );
-	
-						relation2points[relation].push_back(current_pixel);					
-						GT_tag2points  [tag_GT].push_back(current_pixel);
-						DuDe_tag2points[tag_DuDe].push_back(current_pixel);
+					if(tag_DuDe>0 && tag_GT>0 ){
+						gt_tag2mapper  [tag_GT][tag_DuDe].push_back(current_pixel);
+						DuDe_tag2mapper[tag_DuDe][tag_GT].push_back(current_pixel);
 					}
 				}
 			}
 			
+			std::vector<float> precisions_inside, recalls_inside;			
 
-			std::vector<float> precisions_inside, recalls_inside;
-			for( match2points::iterator it = relation2points.begin(); it!= relation2points.end(); it++ ){
-				std::vector < int >     current_relation = it->first;
-				std::vector < cv::Point > current_points = it->second;
-				
-				if(current_points.size() > (GT_segmentation.rows * GT_segmentation.rows)/100){
-					int points_in_GT, points_in_DuDe, points_in_both;
-					
-					points_in_GT = GT_tag2points[current_relation[0]].size();
-					points_in_DuDe = DuDe_tag2points[current_relation[1]].size();
-					points_in_both = current_points.size();
-					
-					std::cout << "Relation ("<< current_relation[0] << "," << current_relation[1] << ") with " << current_points.size() << " points" << std::endl;
-					std::cout << "   Precision: "<<  100*points_in_both/points_in_GT << "%, Recall: " << 100*points_in_both/points_in_DuDe<<"% " << std::endl;
-					precisions_inside.push_back(100*points_in_both/points_in_GT);
-					recalls_inside   .push_back(100*points_in_both/points_in_DuDe);
+//			std::cout << "Regions in GT: "<< std::endl;
+			for( tag2tagMapper::iterator it = gt_tag2mapper.begin(); it!= gt_tag2mapper.end(); it++ ){
+//				std::cout << "   " << it->first << " connected to "<< std::endl;
+				tag2points inside = it->second;
+				int max_intersection=0, total_points=0; 
+				for( tag2points::iterator it2 = inside.begin(); it2!= inside.end(); it2++ ){
+					total_points += it2->second.size();
+					if (it2->second.size() > max_intersection) max_intersection = it2->second.size();
+//					std::cout << "      " << it2->first << " with "<< it2->second.size() <<" points" << std::endl;					
 				}
-			}
+//				std::cout << "   max is " << max_intersection << " that represents " << 100*max_intersection/total_points   << std::endl;
+				precisions_inside.push_back(100*max_intersection/total_points);
+			}			
 			
+//			std::cout << "Regions in DuDe: "<< std::endl;
+			for( tag2tagMapper::iterator it = DuDe_tag2mapper.begin(); it!= DuDe_tag2mapper.end(); it++ ){
+//				std::cout << "   " << it->first << " connected to "<< std::endl;
+				tag2points inside = it->second;
+				int max_intersection=0, total_points=0; 
+				for( tag2points::iterator it2 = inside.begin(); it2!= inside.end(); it2++ ){
+					total_points += it2->second.size();
+					if (it2->second.size() > max_intersection) max_intersection = it2->second.size();
+//					std::cout << "      " << it2->first << " with "<< it2->second.size() <<" points" << std::endl;					
+				}
+//				std::cout << "   max is " << max_intersection << " that represents " << 100*max_intersection/total_points   << std::endl;
+				recalls_inside.push_back(100*max_intersection/total_points);
+			}			
+			
+
 			Precisions.push_back(precisions_inside);
 			Recalls.push_back   (recalls_inside);
 			
-			 /*
-			for( tag2points::iterator it = GT_tag2points.begin(); it!= GT_tag2points.end(); it++ ){
-				std::cout << "GT Tags "<< *it << std::endl;
-			}
-			for( std::set <int>::iterator it = DuDe_tags.begin(); it!= DuDe_tags.end(); it++ ){
-				std::cout << "DuDe tags "<< *it << std::endl;
-			}
-			//*/
-//			std::cout << "relation2points size "<< relation2points.size() << std::endl;
-			return relation2points;
 		}
 
 	////////////////////
-		cv::Mat simple_segment(cv::Mat image_in, bool segment){
+		cv::Mat simple_segment(cv::Mat image_in){
 			Incremental_Decomposer inc_decomp;
 			Stable_graph Stable;
 			cv::Point2f origin(0,0);
@@ -248,12 +316,8 @@ class ROS_handler
 			cv::Mat pre_decompose = image_in.clone();
 			cv::Mat pre_decompose_BW = pre_decompose > 250;
 
-			if(segment){
-				Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
-			}
-			else{
-				Stable = inc_decomp.decompose_image(pre_decompose_BW, 100/resolution, origin , resolution);
-			}
+			Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
+		
 				
 
 //			cv::Mat Segmentation = Stable.draw_stable_contour();
@@ -268,8 +332,34 @@ class ROS_handler
 		}
 	
 	////////////////////
+		cv::Mat segment_Ground_Truth(cv::Mat GroundTruth_BW){
+			cv::Mat src = GroundTruth_BW.clone();
+			cv::Mat drawing = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
 
+			src = src > 250;
+			
+			cv::erode(src, src, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			// erode ground truth obstacle
+			
+			std::vector<std::vector<cv::Point> > contours;
+			std::vector<cv::Vec4i> hierarchy;
+			
+			cv::findContours( src, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+			
+			// iterate through all the top-level contours,
+			// draw each connected component with its own random color
+			int idx = 0;
+			int color=1;
+			for( ; idx >= 0; idx = hierarchy[idx][0] )
+			{
+//				cv::drawContours( drawing, contours, idx, (rand()%244 + 10) , CV_FILLED, 20, hierarchy );
+				cv::drawContours( drawing, contours, idx, color , CV_FILLED, 20, hierarchy );
+				color++;
+			}
+			cv::dilate(drawing, drawing, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			// erode dilate drawing
+			return drawing;
+		}
 
+	////////////////////
 		std::vector<std::string> listFile(){
 	        DIR *pDIR;
 	        struct dirent *entry;
@@ -294,7 +384,7 @@ class ROS_handler
 			std::cout << "Files size "<< files_to_read.size() << std::endl;
 			return files_to_read;
 		}
-
+	////////////////////
 		void init(){
 			std::vector<std::string> files_to_read = listFile();
 			
@@ -305,25 +395,67 @@ class ROS_handler
 			for (int i=0; i < files_to_read.size() ; i++){
 				std::cout << "Reading file  "<< files_to_read[i] << std::endl<< std::endl<< std::endl<< std::endl;
 				read_files(files_to_read[i]);
+				publish_Image();
 			}
 			
-			//Print results
-			std::cout << "Results  " << std::endl;
-			float cum_precision=0;
-			float cum_recall=0;
-			int size=0;
-			for(int i=0; i < Precisions.size();i++){
-				for(int j=0; j < Precisions[i].size();j++){
-					cum_precision += Precisions[i][j];
-					cum_recall    += Recalls[i][j];
-					size++;
-				}
-			}			
-			std::cout << "Average Precision: "<<  cum_precision/size  << ", Average Recall: "<<  cum_recall/size << std::endl;
+			print_report(files_to_read);
+
 			
 		}
 
+	///////////////////
+		void print_report(std::vector<std::string> files_to_read){
+			
+			
+			//Print results
+			std::cout << "Final Results  " << std::endl;
+			double cum_time=0;
+			
+			for(int file_num=0; file_num < files_to_read.size(); file_num++){
+				//Print results
+				std::cout << "   "<< file_num+1 << ") File:  " << files_to_read[file_num] << std::endl;
+				float cum_precision=0;
+				float cum_recall=0;
+				int size_precision=0, size_recall=0;
+				for(int j=0; j < Precisions[file_num].size();j++){
+					cum_precision += Precisions[file_num][j];
+					size_precision++;
+				}
+				for(int j=0; j < Recalls[file_num].size();j++){
+					cum_recall    += Recalls[file_num][j];
+					size_recall++;
+				}
+				printf("     Avg Precision: %.2f, Avg Recall: %.2f, time: %.3f \n",cum_precision/size_precision, cum_recall/size_recall, Times[file_num]/1000);
+				current_file++;
+				cum_time += Times[file_num];
+			}
+			
+			
+			
+			
+			
+			float cum_precision=0;
+			float cum_recall=0;
+			int size_precision=0, size_recall=0;
+			for(int i=0; i < Precisions.size();i++){
+				for(int j=0; j < Precisions[i].size();j++){
+					cum_precision += Precisions[i][j];
+					size_precision++;
+				}
+			}			
+			for(int i=0; i < Recalls.size();i++){
+				for(int j=0; j < Recalls[i].size();j++){
+					cum_recall    += Recalls[i][j];
+					size_recall++;
+				}
+			}			
 
+//			std::cout << "Full Average Precision: "<<  cum_precision/size_precision  << ", Full Average Recall: "<<  cum_recall/size_recall << std::endl;
+			std::cout << files_to_read.size();
+			printf(" files processed. Avg time: %.3f, Avg Precision: %.2f%%, Avg Recall %.2f%% \n", (cum_time/files_to_read.size() )/1000, cum_precision/size_precision, cum_recall/size_recall);
+
+//			std::cout << "Full Average Precision: "<<  cum_precision/size_precision  << ", Full Average Recall: "<<  cum_recall/size_recall << std::endl;
+		}
 
 };
 
