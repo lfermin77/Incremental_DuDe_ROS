@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 //DuDe
 #include "inc_decomp.hpp"
@@ -136,11 +137,23 @@ class ROS_handler
 			}
 			
 
-/*
+//*
+			double cum_time = 0, cum_quad_time = 0;
 			for(int i=0; i < clean_time_vector.size(); i++){
 //				cout << time_vector[i] << endl;
-				printf("%.0f %.0f %.0f %.0f \n", paint_time_vector[i], clean_time_vector[i],  decomp_time_vector[i] , complete_time_vector[i]);
+//				printf("%.0f %.0f %.0f %.0f \n", paint_time_vector[i], clean_time_vector[i],  decomp_time_vector[i] , complete_time_vector[i]);
+				cum_time += complete_time_vector[i];
+				cum_quad_time += complete_time_vector[i]*complete_time_vector[i];
 			}
+			float avg_time      =      cum_time/clean_time_vector.size() ;
+			float avg_quad_time = cum_quad_time/clean_time_vector.size() ;
+			float std_time = sqrt( avg_quad_time - avg_time*avg_time  );
+			
+			std::cout << clean_time_vector.size();
+			printf(" frames processed. Avg time: %.0f + %.0f ms \n", avg_time, std_time);
+
+			cv::flip(black_image, black_image,0);  cv::Mat big = Stable.draw_stable_contour() & ~black_image;			
+			save_images_color(big);
 			//*/
 			
 		/////////////////////////	
@@ -252,6 +265,32 @@ class ROS_handler
 				first_rect |= cv::boundingRect(test_contour[i]);
 			}
 			return first_rect;
+		}
+
+	/////////////////
+		void save_images_color(cv::Mat DuDe_segmentation){
+			std::string full_path_decomposed       = "src/Incremental_DuDe_ROS/maps/Topological_Segmentation/map_decomposed.png";
+			double min, max;
+			
+			std::vector <cv::Vec3b> color_vector;
+			cv::Vec3b black(0, 0, 0);
+			color_vector.push_back(black);
+			
+			cv::minMaxLoc(DuDe_segmentation, &min,&max);
+
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat DuDe_segmentation_float = cv::Mat::zeros(DuDe_segmentation.size(), CV_8UC3);
+			for(int i=0; i < DuDe_segmentation.rows; i++){
+				for(int j=0;j<DuDe_segmentation.cols; j++){
+					int color_index = DuDe_segmentation.at<uchar>(i,j);
+					DuDe_segmentation_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}
+			cv::imwrite( full_path_decomposed , DuDe_segmentation_float );
+
 		}
 
 

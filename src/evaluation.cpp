@@ -47,9 +47,8 @@ class ROS_handler
 	public:
 		ROS_handler( float threshold) :   it_(n), it2_(n), Decomp_threshold_(threshold)
 		{
-			ROS_INFO("Waiting for the map");
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
-			twist_sub_ = n.subscribe("cmd_vel", 2, &ROS_handler::twistCallback, this);
+			twist_sub_ = n.subscribe("cmd_vel", 1, &ROS_handler::twistCallback, this);
 			segmentation_ready = false;
 			
 			image_pub_  = it_.advertise("/ground_truth_segmentation", 1);			
@@ -63,12 +62,13 @@ class ROS_handler
 			//cv_ptr2->encoding = "mono8";
 			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 			
-//			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/test_maps";
-//			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/nested_maps";
+
 			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
-//			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/bad_maps";
 			gt_ending = "_gt_segmentation.png";
+			/// furniture
 			FuT_ending ="_furnitures.png";
+			/// no furniture
+			///FuT_ending =".png"; 
 
 			current_file=0;
 			init();			//read_files();
@@ -223,14 +223,23 @@ class ROS_handler
 			end_process = getTime();	decompose_time = end_process - begin_process;			
 			std::cout << "Time to decompose " << decompose_time << std::endl;
 			Times.push_back(decompose_time);
-			
-			std::string full_path_decomposed       = base_path + "/" + name + "_DuDe_segmented.png";
-//			cv::imwrite( full_path_decomposed , DuDe_segmentation );
-			
 
 			compare_images(GT_segmentation, DuDe_segmentation);
 			
-						
+			cv::Mat proxy;
+			DuDe_segmentation.copyTo( proxy ,image_original>250);						
+			DuDe_segmentation = proxy.clone();
+
+			GT_segmentation.copyTo( proxy ,image_original>250);						
+			GT_segmentation = proxy.clone();
+
+
+//			save_images_gray(name, DuDe_segmentation, GT_segmentation);
+			save_images_color(name, DuDe_segmentation, GT_segmentation);
+			
+
+			
+
 			/////////////
 			cv::Mat to_publish = GT_segmentation.clone();
 			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
@@ -409,7 +418,7 @@ class ROS_handler
 			
 			//Print results
 			std::cout << "Final Results  " << std::endl;
-			double cum_time=0;
+			double cum_time=0,cum_quad_time=0;
 			
 			for(int file_num=0; file_num < files_to_read.size(); file_num++){
 				//Print results
@@ -428,34 +437,113 @@ class ROS_handler
 				printf("     Avg Precision: %.2f, Avg Recall: %.2f, time: %.3f \n",cum_precision/size_precision, cum_recall/size_recall, Times[file_num]/1000);
 				current_file++;
 				cum_time += Times[file_num];
+				cum_quad_time += Times[file_num]*Times[file_num];
 			}
 			
 			
 			
 			
 			
-			float cum_precision=0;
-			float cum_recall=0;
+			float cum_precision=0,cum_quad_precision=0;
+			float cum_recall=0, cum_quad_recall=0;
 			int size_precision=0, size_recall=0;
 			for(int i=0; i < Precisions.size();i++){
 				for(int j=0; j < Precisions[i].size();j++){
 					cum_precision += Precisions[i][j];
+					cum_quad_precision += Precisions[i][j]*Precisions[i][j];
 					size_precision++;
 				}
 			}			
 			for(int i=0; i < Recalls.size();i++){
 				for(int j=0; j < Recalls[i].size();j++){
 					cum_recall    += Recalls[i][j];
+					cum_quad_recall    += Recalls[i][j]*Recalls[i][j];
 					size_recall++;
 				}
 			}			
 
+			float avg_time      = (cum_time/files_to_read.size() );
+			float avg_quad_time = (cum_quad_time/files_to_read.size() );
+			float std_time = sqrt( avg_quad_time - avg_time*avg_time  )/1000;
+
+			float avg_precision      = cum_precision/size_precision;
+			float avg_quad_precision = cum_quad_precision/size_precision;
+			float std_precision      = sqrt( avg_quad_precision - avg_precision*avg_precision  );
+
+			float avg_recall      = cum_recall/size_recall;
+			float avg_quad_recall = cum_quad_recall/size_recall;
+			float std_recall      = sqrt( avg_quad_recall - avg_recall*avg_recall  );
+
+
+
 //			std::cout << "Full Average Precision: "<<  cum_precision/size_precision  << ", Full Average Recall: "<<  cum_recall/size_recall << std::endl;
 			std::cout << files_to_read.size();
-			printf(" files processed. Avg time: %.3f, Avg Precision: %.2f%%, Avg Recall %.2f%% \n", (cum_time/files_to_read.size() )/1000, cum_precision/size_precision, cum_recall/size_recall);
+			printf(" files processed. Avg time: %.2f+%.2f, Avg Precision: %.2f%%+%.2f%%, Avg Recall %.2f%%+%.2f%% \n",
+					avg_time/1000, std_time, 
+			        avg_precision, std_precision,
+			        avg_recall, std_recall);
 
 //			std::cout << "Full Average Precision: "<<  cum_precision/size_precision  << ", Full Average Recall: "<<  cum_recall/size_recall << std::endl;
 		}
+	//////////////////
+		void save_images_gray(std::string name, cv::Mat DuDe_segmentation, cv::Mat GT_segmentation){
+			std::string full_path_decomposed       = base_path + "/Tagged_Images/" + name + "_DuDe_segmented.png";
+			double min, max;
+			cv::minMaxLoc(DuDe_segmentation, &min,&max);
+			cv::Mat DuDe_segmentation_float = 255*DuDe_segmentation/max;
+			cv::imwrite( full_path_decomposed , DuDe_segmentation_float );
+
+			full_path_decomposed       = base_path + "/Tagged_Images/" + name + "_original_tags.png";			
+			cv::minMaxLoc(GT_segmentation, &min,&max);
+			cv::Mat GT_segmentation_float = 255*GT_segmentation/max;
+			cv::imwrite( full_path_decomposed , GT_segmentation_float );
+		}
+
+	/////////////////
+		void save_images_color(std::string name, cv::Mat DuDe_segmentation, cv::Mat GT_segmentation){
+			std::string full_path_decomposed       = base_path + "/Tagged_Images/" + name + "_DuDe_segmented.png";
+			double min, max;
+			
+			std::vector <cv::Vec3b> color_vector;
+			cv::Vec3b black(0, 0, 0);
+			color_vector.push_back(black);
+			
+			cv::minMaxLoc(DuDe_segmentation, &min,&max);
+
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat DuDe_segmentation_float = cv::Mat::zeros(DuDe_segmentation.size(), CV_8UC3);
+			for(int i=0; i < DuDe_segmentation.rows; i++){
+				for(int j=0;j<DuDe_segmentation.cols; j++){
+					int color_index = DuDe_segmentation.at<uchar>(i,j);
+					DuDe_segmentation_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}
+			cv::imwrite( full_path_decomposed , DuDe_segmentation_float );
+			///////////////////////////
+			full_path_decomposed       = base_path + "/Tagged_Images/" + name + "_original_tags.png";	
+			color_vector.clear();
+			color_vector.push_back(black);
+			cv::minMaxLoc(GT_segmentation, &min,&max);
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat GT_segmentation_float = cv::Mat::zeros(GT_segmentation.size(), CV_8UC3);
+			for(int i=0; i < GT_segmentation.rows; i++){
+				for(int j=0;j<GT_segmentation.cols; j++){
+					int color_index = GT_segmentation.at<uchar>(i,j);
+					GT_segmentation_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}						
+			cv::imwrite( full_path_decomposed , GT_segmentation_float );			
+			//////////////////////////////
+
+		}
+
+
 
 };
 
@@ -474,7 +562,7 @@ int main(int argc, char **argv)
 	ros::init(argc, argv, "evaluation");
 	
 	
-	float decomp_th=3;
+	float decomp_th=2.7;
 	if (argc ==2){ decomp_th = atof(argv[1]); }	
 	
 	ROS_handler mg(decomp_th);
