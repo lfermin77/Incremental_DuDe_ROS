@@ -65,9 +65,9 @@ class ROS_handler
 
 			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
 			gt_ending = "_gt_segmentation.png";
-			/// furniture
+				/// furniture
 			FuT_ending ="_furnitures.png";
-			/// no furniture
+				/// no furniture
 			///FuT_ending =".png"; 
 
 			current_file=0;

@@ -141,16 +141,18 @@ class ROS_handler
 			double cum_time = 0, cum_quad_time = 0;
 			for(int i=0; i < clean_time_vector.size(); i++){
 //				cout << time_vector[i] << endl;
-//				printf("%.0f %.0f %.0f %.0f \n", paint_time_vector[i], clean_time_vector[i],  decomp_time_vector[i] , complete_time_vector[i]);
+				printf("%.0f %.0f %.0f %.0f \n", paint_time_vector[i], clean_time_vector[i],  decomp_time_vector[i] , complete_time_vector[i]);
 				cum_time += complete_time_vector[i];
 				cum_quad_time += complete_time_vector[i]*complete_time_vector[i];
 			}
 			float avg_time      =      cum_time/clean_time_vector.size() ;
 			float avg_quad_time = cum_quad_time/clean_time_vector.size() ;
 			float std_time = sqrt( avg_quad_time - avg_time*avg_time  );
+
+			std::cout << "Number of Regions " << Stable.Region_contour.size() << std::endl;
 			
-			std::cout << clean_time_vector.size();
-			printf(" frames processed. Avg time: %.0f + %.0f ms \n", avg_time, std_time);
+//			std::cout << clean_time_vector.size();
+//			printf(" frames processed. Avg time: %.0f + %.0f ms \n", avg_time, std_time);
 
 			cv::flip(black_image, black_image,0);  cv::Mat big = Stable.draw_stable_contour() & ~black_image;			
 			save_images_color(big);
