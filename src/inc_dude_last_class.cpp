@@ -120,8 +120,8 @@ class ROS_handler
 
 //*/	
 			
-//			grad = Stable.draw_stable_contour();	
-			grad = image_cleaned;	
+			grad = Stable.draw_stable_contour();	
+//			grad = image_cleaned;	
 
 			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
 //			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
