@@ -43,7 +43,7 @@ cv::Rect DuDe_OpenCV_wrapper::Decomposer(cv::Mat Occ_Image){
 	std::cout << "Finding Contours....... "; double start_finding = getTime();
 	std::vector<std::vector<cv::Point> > Explored_contour;
 	std::vector<cv::Vec4i> hierarchy; //[Next, Previous, First_Child, Parent]
-	cv::findContours(Occ_Image, Explored_contour, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE );
+	cv::findContours(Occ_Image, Explored_contour, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_TC89_L1 );
 		
 	int current_index=0;
 	cv::Rect resize_rect = boundingRect(Explored_contour[0]);

@@ -63,6 +63,7 @@ class ROS_handler
 		///////////////////////Occupancy to clean image	
 			cv::Mat grad, img(map->info.height, map->info.width, CV_8U);
 			img.data = (unsigned char *)(&(map->data[0]) );
+			cv::Mat received_image = img.clone();
 			
 			float pixel_Tau = Decomp_threshold_ / map->info.resolution;				
 			cv_ptr->header = map->header;
@@ -80,7 +81,7 @@ class ROS_handler
 			cv::Mat image_cleaned = cv::Mat::zeros(img.size(), CV_8UC1);
 			cv::Mat black_image   = cv::Mat::zeros(img.size(), CV_8UC1);
 
-/*
+//*
 			cv::Mat black_image2, image_cleaned2 = clean_image2(cropped_img, black_image2);
 			
 
@@ -88,7 +89,7 @@ class ROS_handler
 			image_cleaned2.copyTo(image_cleaned (first_rect));
 			black_image2.copyTo(black_image (first_rect));
 //*/			
-			image_cleaned = clean_image(img, black_image);
+//			image_cleaned = clean_image2(received_image, black_image);
 						
 			end_process = getTime();	occupancy_time = end_process - begin_process;
 
@@ -119,7 +120,8 @@ class ROS_handler
 
 //*/	
 			
-			grad = Stable.draw_stable_contour();	
+//			grad = Stable.draw_stable_contour();	
+			grad = image_cleaned;	
 
 			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
 //			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
@@ -159,8 +161,8 @@ class ROS_handler
 //			std::cout << clean_time_vector.size();
 //			printf(" frames processed. Avg time: %.0f + %.0f ms \n", avg_time, std_time);
 
-			cv::flip(black_image, black_image,0);  cv::Mat big = Stable.draw_stable_contour() & ~black_image;			
-			save_images_color(big);
+//			cv::flip(black_image, black_image,0);  cv::Mat big = Stable.draw_stable_contour() & ~black_image;			
+//			save_images_color(big);
 			//*/
 			
 		/////////////////////////	

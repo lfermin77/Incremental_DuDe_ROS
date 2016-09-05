@@ -21,6 +21,7 @@ cv::Mat Stable_graph::draw_stable_contour(){
 
 
 
+
 Incremental_Decomposer::Incremental_Decomposer(){
 	Decomp_threshold_ = 2.5;
 	resolution=0.05; //default;
