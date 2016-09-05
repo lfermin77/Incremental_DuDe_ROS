@@ -77,14 +77,19 @@ class ROS_handler
 			cv::Mat cropped_img;
 			img(first_rect).copyTo(cropped_img); /////////// Cut the relevant image
 
-			cv::Mat black_image2, image_cleaned2 = clean_image2(cropped_img, black_image2);
-			
 			cv::Mat image_cleaned = cv::Mat::zeros(img.size(), CV_8UC1);
 			cv::Mat black_image   = cv::Mat::zeros(img.size(), CV_8UC1);
+
+/*
+			cv::Mat black_image2, image_cleaned2 = clean_image2(cropped_img, black_image2);
+			
+
 			
 			image_cleaned2.copyTo(image_cleaned (first_rect));
 			black_image2.copyTo(black_image (first_rect));
-			
+//*/			
+			image_cleaned = clean_image(img, black_image);
+						
 			end_process = getTime();	occupancy_time = end_process - begin_process;
 
 
