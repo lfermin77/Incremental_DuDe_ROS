@@ -94,13 +94,14 @@ class ROS_handler
 			end_process = getTime();	occupancy_time = end_process - begin_process;
 
 
-
+//			Incremental_Decomposer inc_decomp_batch;
 
 		///////////////////////// Decompose Image
 			begin_process = getTime();
 			
 		    try{
 				Stable = inc_decomp.decompose_image(image_cleaned, pixel_Tau, origin, map->info.resolution);
+//				Stable = inc_decomp_batch.decompose_image(image_cleaned, pixel_Tau, origin, map->info.resolution);
 			}
 			catch (...)  {			}
 
