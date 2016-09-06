@@ -1,0 +1,10 @@
+function [ ok ] = draw_stacked( time_vector)
+
+close all
+paint = time_vector(:,1)
+pre_dec = time_vector(:,)
+dec = time_vector(:,1)
+
+
+bar(time_vector, 'stacked')
+title('Graph of Sine and Cosine Between -2\pi and 2\pi');
