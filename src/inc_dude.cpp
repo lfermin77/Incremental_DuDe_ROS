@@ -1,6 +1,7 @@
 //ROS
 #include "ros/ros.h"
 #include "nav_msgs/GetMap.h"
+#include "std_msgs/String.h"
 
 //openCV
 #include <cv_bridge/cv_bridge.h>
@@ -26,6 +27,7 @@ class ROS_handler
 		
 	std::string mapname_;
 	ros::Subscriber map_sub_;	
+	ros::Subscriber chat_sub_;	
 	ros::Timer timer;
 			
 	float Decomp_threshold_;
@@ -40,6 +42,7 @@ class ROS_handler
 		{
 			ROS_INFO("Waiting for the map");
 			map_sub_ = n.subscribe("map", 2, &ROS_handler::mapCallback, this); //mapname_ to include different name
+			chat_sub_ = n.subscribe("chat", 2, &ROS_handler::chatCallback, this); //mapname_ to include different name
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
 
 			image_pub_ = it_.advertise("/tagged_image", 1);			
@@ -94,7 +97,7 @@ class ROS_handler
 			end_process = getTime();	occupancy_time = end_process - begin_process;
 
 
-//			Incremental_Decomposer inc_decomp_batch;
+			Incremental_Decomposer inc_decomp_batch;
 
 		///////////////////////// Decompose Image
 			begin_process = getTime();
@@ -120,8 +123,8 @@ class ROS_handler
 			big(first_rect).copyTo(grad);
 
 //*/	
-			
-			grad = Stable.draw_stable_contour();	
+			cv::flip(black_image, black_image,0); 
+			grad = Stable.draw_stable_contour() & ~black_image;	
 //			grad = image_cleaned;	
 
 			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
@@ -177,7 +180,15 @@ class ROS_handler
 		  publish_Image();
 		}
 
-
+///////////////
+		void chatCallback(const std_msgs::String& chat){
+			int a=1;
+			std::cout << "Chat time" << std::endl;
+			cv::Mat integer_image, float_image;
+			float_image = cv_ptr->image.clone();
+			float_image.convertTo(integer_image, CV_8UC1);
+			save_images_color(integer_image);
+		}
 
 
 ////////////////////////
