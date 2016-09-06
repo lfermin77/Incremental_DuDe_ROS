@@ -323,7 +323,9 @@ class ROS_handler
 
 			
 			cv::Mat pre_decompose = image_in.clone();
-			cv::Mat pre_decompose_BW = pre_decompose > 250;
+//			cv::Mat pre_decompose_BW = pre_decompose > 250;
+			cv::Mat pre_decompose_BW = clean_image(pre_decompose > 250);
+
 
 			Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
 		
@@ -478,7 +480,7 @@ class ROS_handler
 
 //			std::cout << "Full Average Precision: "<<  cum_precision/size_precision  << ", Full Average Recall: "<<  cum_recall/size_recall << std::endl;
 			std::cout << files_to_read.size();
-			printf(" files processed. Avg time: %.2f+%.2f, Avg Precision: %.2f%%+%.2f%%, Avg Recall %.2f%%+%.2f%% \n",
+			printf(" files processed. Avg time: %.2f+%.2f, Avg Precision: %.1f%%+%.1f%%, Avg Recall %.1f%%+%.1f%% \n",
 					avg_time/1000, std_time, 
 			        avg_precision, std_precision,
 			        avg_recall, std_recall);
@@ -543,7 +545,26 @@ class ROS_handler
 
 		}
 
+	//////////////
+		cv::Mat clean_image(cv::Mat Occ_Image){
+			//Occupancy Image to Free Space	
+			cv::Mat open_space = Occ_Image.clone();
+			cv::Mat Median_Image, out_image, temp_image ;
+			int filter_size=2;
 
+
+			filter_size=2;
+			cv::boxFilter(open_space, temp_image, -1, cv::Size(filter_size, filter_size), cv::Point(-1,-1), false, cv::BORDER_DEFAULT ); // filter open_space
+			Median_Image = temp_image > filter_size*filter_size/2;  // threshold in filtered
+
+
+//			cv::erode(Median_Image, Median_Image, cv::Mat(), cv::Point(-1,-1), 2, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			// inflate obstacle
+			Median_Image = Median_Image | open_space ;
+						
+			out_image = Median_Image;// & ~black_image;// Open space without obstacles
+
+			return out_image;
+		}
 
 };
 
