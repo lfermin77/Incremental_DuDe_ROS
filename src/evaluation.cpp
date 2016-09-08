@@ -242,7 +242,7 @@ class ROS_handler
 			cv::Mat DuDe_segmentation;
 
 				
-			if(false){
+			if(true){
 				double begin_process, end_process, decompose_time;
 				begin_process = getTime();
 				
@@ -443,7 +443,7 @@ class ROS_handler
 				pre_decompose_BW.copyTo(current_scan, current_circle); // Aggregated Scan		
 
 				///////////////
-				if (countNonZero(current_scan)  > 60) {
+				if (countNonZero(current_scan)  > 160) {
 					double begin_process, end_process, decompose_time;
 					begin_process = getTime();						
 					Stable = inc_decomp.decompose_image(current_scan, Decomp_threshold_/resolution, origin , resolution);				
