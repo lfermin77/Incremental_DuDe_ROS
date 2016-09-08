@@ -48,7 +48,7 @@ class ROS_handler
 		ROS_handler( float threshold) :   it_(n), it2_(n), Decomp_threshold_(threshold)
 		{
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
-			twist_sub_ = n.subscribe("cmd_vel", 1, &ROS_handler::twistCallback, this);
+			twist_sub_ = n.subscribe("cmd_vel", 1, &ROS_handler::twistCallback3, this);
 			segmentation_ready = false;
 			
 			image_pub_  = it_.advertise("/ground_truth_segmentation", 1);			
@@ -65,13 +65,13 @@ class ROS_handler
 
 			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
 			gt_ending = "_gt_segmentation.png";
-				/// furniture
+				/// With    furniture
 			FuT_ending ="_furnitures.png";
-				/// no furniture
+				/// Without furniture
 			///FuT_ending =".png"; 
 
 			current_file=0;
-			init();			//read_files();
+//			init();			//read_files();
 						
 		}
 
@@ -176,12 +176,48 @@ class ROS_handler
 				segmentation_ready = true;
 				current_file++;
 			}
-//*/			
-			
-			
-			
-			
+//*/						
 		}
+
+
+
+		void twistCallback3(const geometry_msgs::Twist& msg)
+		{
+
+			std::string full_path       = base_path + "/" + "lab_intel" + gt_ending;
+
+			cv::Mat image_GT     = cv::imread(full_path,0);   // Read the file			
+			cv::Mat image_GT_BW = image_GT > 250;
+			
+			cv::Mat processed_image;// = image_GT_BW.clone();
+			
+			cv::Mat current_circle = cv::Mat::zeros(image_GT.size(),CV_8UC1);;
+
+
+			div_t divresult = div (100*current_file,image_GT.size().width );
+			int x = divresult.rem;
+			int y = 100*divresult.quot;
+
+			cv::Point current_position = cv::Point(x,y);
+			cv::circle(current_circle, current_position, 100, 1, -1);
+
+
+			processed_image = current_circle;
+			/////////////
+			cv::Mat to_publish = processed_image;
+			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
+			to_publish.copyTo(cv_ptr->image);////most important
+			///////////
+			/*
+			cv::Mat to_publish2 = image_GT_tagged.clone();
+			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
+			to_publish2.copyTo(cv_ptr2->image);////most important
+			///////////*/
+			
+			current_file ++;
+			publish_Image();
+		}
+
 
 
 ////////////////////////
