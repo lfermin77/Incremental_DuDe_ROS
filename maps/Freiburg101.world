@@ -61,11 +61,11 @@ window
 floorplan
 ( 
   name "willow"
-  bitmap "../maps/center_mapping.pgm"
-  size [32.15 17.7 1.000]
-  pose [ 8 10 0 90.000 ] 
+  bitmap "../maps/Freiburg101.pgm"
+  size [67.2 40 1.000]
+  pose [ 4 10 0 90.000 ] 
 )
 
 # throw in a robot
-pr2( pose [ 7 10 0 87.363 ] name "pr2" color "blue")
+pr2( pose [ 0 0 0 87.363 ] name "pr2" color "blue")
 block( pose [ -25.251 10.586 0 180.000 ] color "red")
