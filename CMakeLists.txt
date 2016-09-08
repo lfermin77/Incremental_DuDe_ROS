@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(CGAL REQUIRED COMPONENTS Core)
 
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake_modules)
 find_package(MPFR)
 
 catkin_package(
