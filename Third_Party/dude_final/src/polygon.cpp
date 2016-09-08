@@ -9,13 +9,8 @@
 #include "bpc.h"
 #include <vector>
 
-#ifdef _WIN32
-extern "C"{
-#include "triangulate.h"
-}
-#else
-#include "triangulate.h"
-#endif
+
+#include "FIST/triangulate.h"
 
 
 c_polygon g_P;
