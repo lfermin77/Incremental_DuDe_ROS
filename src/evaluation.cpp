@@ -22,10 +22,10 @@ class ROS_handler
 {
 	ros::NodeHandle n;
 	
-	image_transport::ImageTransport it_, it2_;
-	image_transport::Subscriber image_sub_, image_sub2_;
-	image_transport::Publisher image_pub_, image_pub2_;	
-	cv_bridge::CvImagePtr cv_ptr, cv_ptr2;
+	image_transport::ImageTransport it_, it2_, it3_;
+	image_transport::Subscriber image_sub_, image_sub2_, image_sub3_;
+	image_transport::Publisher image_pub_, image_pub2_, image_pub3_;	
+	cv_bridge::CvImagePtr cv_ptr, cv_ptr2, cv_ptr3;
 		
 	ros::Timer timer;
 	ros::Subscriber twist_sub_;	
@@ -44,15 +44,17 @@ class ROS_handler
 
 	int current_file;
 	
+	
 	public:
-		ROS_handler( float threshold) :   it_(n), it2_(n), Decomp_threshold_(threshold)
+		ROS_handler( float threshold) :   it_(n), it2_(n), it3_(n), Decomp_threshold_(threshold)
 		{
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
-			twist_sub_ = n.subscribe("cmd_vel", 1, &ROS_handler::twistCallback3, this);
+			twist_sub_ = n.subscribe("cmd_vel", 1, &ROS_handler::twistCallback, this);
 			segmentation_ready = false;
 			
 			image_pub_  = it_.advertise("/ground_truth_segmentation", 1);			
 			image_pub2_ = it_.advertise("/DuDe_segmentation",   1);			
+			image_pub3_ = it_.advertise("/Inc_DuDe_segmentation",   1);			
 
 			cv_ptr.reset (new cv_bridge::CvImage);
 			//cv_ptr->encoding = "mono8";
@@ -61,6 +63,10 @@ class ROS_handler
 			cv_ptr2.reset (new cv_bridge::CvImage);
 			//cv_ptr2->encoding = "mono8";
 			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
+
+			cv_ptr3.reset (new cv_bridge::CvImage);
+			//cv_ptr3->encoding = "mono8";
+			cv_ptr3->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 			
 
 			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
@@ -68,11 +74,11 @@ class ROS_handler
 				/// With    furniture
 			FuT_ending ="_furnitures.png";
 				/// Without furniture
-			///FuT_ending =".png"; 
+			//FuT_ending =".png"; 
 
 			current_file=0;
-//			init();			//read_files();
-						
+			init();			
+					
 		}
 
 
@@ -118,6 +124,7 @@ class ROS_handler
 				}			
 				std::cout << "Average Precision: "<<  cum_precision/size_precision  << ", Average Recall: "<<  cum_recall/size_recall << std::endl;
 				current_file++;
+				publish_Image();
 			}
 			
 			else{
@@ -183,37 +190,18 @@ class ROS_handler
 
 		void twistCallback3(const geometry_msgs::Twist& msg)
 		{
-
-			std::string full_path       = base_path + "/" + "lab_intel" + gt_ending;
-
+			std::string full_path       = base_path + "/" + "lab_intel" + FuT_ending;
 			cv::Mat image_GT     = cv::imread(full_path,0);   // Read the file			
-			cv::Mat image_GT_BW = image_GT > 250;
-			
-			cv::Mat processed_image;// = image_GT_BW.clone();
-			
-			cv::Mat current_circle = cv::Mat::zeros(image_GT.size(),CV_8UC1);;
 
+			double time;
+			cv::Mat decomposed_image = incremental_segment(image_GT, time);
+			std::cout << "Average Time: " << time << std::endl;
 
-			div_t divresult = div (100*current_file,image_GT.size().width );
-			int x = divresult.rem;
-			int y = 100*divresult.quot;
-
-			cv::Point current_position = cv::Point(x,y);
-			cv::circle(current_circle, current_position, 100, 1, -1);
-
-
-			processed_image = current_circle;
 			/////////////
-			cv::Mat to_publish = processed_image;
-			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
-			to_publish.copyTo(cv_ptr->image);////most important
-			///////////
-			/*
-			cv::Mat to_publish2 = image_GT_tagged.clone();
-			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
-			to_publish2.copyTo(cv_ptr2->image);////most important
-			///////////*/
-			
+			cv::Mat to_publish = decomposed_image;
+			cv_ptr3->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
+			to_publish.copyTo(cv_ptr3->image);////most important
+
 			current_file ++;
 			publish_Image();
 		}
@@ -226,6 +214,7 @@ class ROS_handler
 		void publish_Image(){
 			image_pub_.publish (cv_ptr->toImageMsg());
 			image_pub2_.publish(cv_ptr2->toImageMsg());
+			image_pub3_.publish(cv_ptr3->toImageMsg());
 		}
 
 
@@ -250,15 +239,25 @@ class ROS_handler
 
 			cv::Mat GT_segmentation = segment_Ground_Truth(image_GT);
 //			cv::Mat GT_segmentation = simple_segment(image_GT);
+			cv::Mat DuDe_segmentation;
 
-			double begin_process, end_process, decompose_time;
-			begin_process = getTime();
-			
-			cv::Mat DuDe_segmentation = simple_segment(image_original);
-
-			end_process = getTime();	decompose_time = end_process - begin_process;			
-			std::cout << "Time to decompose " << decompose_time << std::endl;
-			Times.push_back(decompose_time);
+				
+			if(false){
+				double begin_process, end_process, decompose_time;
+				begin_process = getTime();
+				
+				DuDe_segmentation = simple_segment(image_original);
+	
+				end_process = getTime();	decompose_time = end_process - begin_process;			
+				std::cout << "Time to decompose " << decompose_time << std::endl;
+				Times.push_back(decompose_time);
+			}
+			else{
+				double time;
+				DuDe_segmentation = incremental_segment(image_original, time);
+				std::cout << "Average Time to decompose " << time << std::endl;
+				Times.push_back(time);
+			}
 
 			compare_images(GT_segmentation, DuDe_segmentation);
 			
@@ -284,6 +283,10 @@ class ROS_handler
 			cv::Mat to_publish2 = DuDe_segmentation.clone();
 			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
 			to_publish2.copyTo(cv_ptr2->image);////most important
+			///////////
+			cv::Mat to_publish3 = DuDe_segmentation.clone();
+			cv_ptr3->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish3, CV_32F);
+			to_publish3.copyTo(cv_ptr3->image);////most important
 			///////////
 			
 			segmentation_ready = true;
@@ -359,8 +362,8 @@ class ROS_handler
 
 			
 			cv::Mat pre_decompose = image_in.clone();
-//			cv::Mat pre_decompose_BW = pre_decompose > 250;
-			cv::Mat pre_decompose_BW = clean_image(pre_decompose > 250);
+			cv::Mat pre_decompose_BW = pre_decompose > 250;
+//			cv::Mat pre_decompose_BW = clean_image(pre_decompose > 250);
 
 
 			Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
@@ -404,6 +407,71 @@ class ROS_handler
 			}
 			cv::dilate(drawing, drawing, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			// erode dilate drawing
 			return drawing;
+		}
+
+	////////////////////
+		cv::Mat incremental_segment(cv::Mat image_in, double & time){
+			Incremental_Decomposer inc_decomp;
+			Stable_graph Stable;
+			cv::Point2f origin(0,0);
+			float resolution = 0.05;
+
+			
+			cv::Mat pre_decompose = image_in.clone();
+			cv::Mat pre_decompose_BW = pre_decompose > 250;
+//			cv::Mat pre_decompose_BW = clean_image(pre_decompose > 250);
+
+
+
+			cv::Mat current_circle = cv::Mat::zeros(image_in.size(),CV_8UC1);
+			cv::Mat scanned_image = cv::Mat::zeros(image_in.size(),CV_8UC1);
+			cv::Mat current_scan;
+							
+			int counter=0;
+			bool stop_criteria=false;
+			float cum_time=0;
+			int valid_images=0;
+
+			while(!stop_criteria){
+				div_t divresult = div (50*counter,pre_decompose_BW.size().width );
+				int x = divresult.rem;
+				int y = 50*divresult.quot;
+	
+				cv::Point current_position = cv::Point(x,y);
+				cv::circle(current_circle, current_position, 100, 1, -1);
+
+				pre_decompose_BW.copyTo(current_scan, current_circle); // Aggregated Scan		
+
+				///////////////
+				if (countNonZero(current_scan)  > 60) {
+					double begin_process, end_process, decompose_time;
+					begin_process = getTime();						
+					Stable = inc_decomp.decompose_image(current_scan, Decomp_threshold_/resolution, origin , resolution);				
+					end_process = getTime();	decompose_time = end_process - begin_process;			
+					valid_images++;
+					cum_time += decompose_time;
+				}
+					
+				////////////////
+
+				
+								
+				if( (x > pre_decompose_BW.size().width) || (y > pre_decompose_BW.size().height) ) {
+					stop_criteria = true;
+				}
+				scanned_image |= current_scan;
+				counter++;
+			}
+
+			///////////
+			cv::Mat Drawing = cv::Mat::zeros(image_in.size(), CV_8UC1);	
+			for(int i = 0; i < Stable.Region_contour.size();i++){
+				drawContours(Drawing, Stable.Region_contour, i, i+1, -1, 8);
+			}
+			time = cum_time/valid_images;
+			std::cout << "Decomposition size: " << Stable.Region_contour.size() << std::endl;
+
+			return Drawing;
 		}
 
 	////////////////////
@@ -581,6 +649,67 @@ class ROS_handler
 
 		}
 
+	/////////////////
+		void save_images_color3(std::string name, cv::Mat DuDe_segmentation, cv::Mat GT_segmentation, cv::Mat inc_DuDe_segmentation){
+			std::string full_path_decomposed       = base_path + "/Tagged_Images/" + name + "_DuDe_segmented.png";
+			double min, max;
+			
+			std::vector <cv::Vec3b> color_vector;
+			cv::Vec3b black(0, 0, 0);
+			color_vector.push_back(black);
+			
+			cv::minMaxLoc(DuDe_segmentation, &min,&max);
+
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat DuDe_segmentation_float = cv::Mat::zeros(DuDe_segmentation.size(), CV_8UC3);
+			for(int i=0; i < DuDe_segmentation.rows; i++){
+				for(int j=0;j<DuDe_segmentation.cols; j++){
+					int color_index = DuDe_segmentation.at<uchar>(i,j);
+					DuDe_segmentation_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}
+			cv::imwrite( full_path_decomposed , DuDe_segmentation_float );
+			///////////////////////////
+			full_path_decomposed       = base_path + "/Tagged_Images/" + name + "_original_tags.png";	
+			color_vector.clear();
+			color_vector.push_back(black);
+			cv::minMaxLoc(GT_segmentation, &min,&max);
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat GT_segmentation_float = cv::Mat::zeros(GT_segmentation.size(), CV_8UC3);
+			for(int i=0; i < GT_segmentation.rows; i++){
+				for(int j=0;j<GT_segmentation.cols; j++){
+					int color_index = GT_segmentation.at<uchar>(i,j);
+					GT_segmentation_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}						
+			cv::imwrite( full_path_decomposed , GT_segmentation_float );			
+			//////////////////////////////
+			full_path_decomposed       = base_path + "/Tagged_Images/" + name + "_inc_dude_segmented.png";	
+			color_vector.clear();
+			color_vector.push_back(black);
+			cv::minMaxLoc(inc_DuDe_segmentation, &min,&max);
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat inc_DuDe_segmentation_float = cv::Mat::zeros(inc_DuDe_segmentation.size(), CV_8UC3);
+			for(int i=0; i < inc_DuDe_segmentation.rows; i++){
+				for(int j=0;j<inc_DuDe_segmentation.cols; j++){
+					int color_index = inc_DuDe_segmentation.at<uchar>(i,j);
+					inc_DuDe_segmentation_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}						
+			cv::imwrite( full_path_decomposed , inc_DuDe_segmentation_float );			
+			//////////////////////////////
+
+		}
+
 	//////////////
 		cv::Mat clean_image(cv::Mat Occ_Image){
 			//Occupancy Image to Free Space	
@@ -593,8 +722,6 @@ class ROS_handler
 			cv::boxFilter(open_space, temp_image, -1, cv::Size(filter_size, filter_size), cv::Point(-1,-1), false, cv::BORDER_DEFAULT ); // filter open_space
 			Median_Image = temp_image > filter_size*filter_size/2;  // threshold in filtered
 
-
-//			cv::erode(Median_Image, Median_Image, cv::Mat(), cv::Point(-1,-1), 2, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );			// inflate obstacle
 			Median_Image = Median_Image | open_space ;
 						
 			out_image = Median_Image;// & ~black_image;// Open space without obstacles
