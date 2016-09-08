@@ -72,9 +72,9 @@ class ROS_handler
 			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
 			gt_ending = "_gt_segmentation.png";
 				/// With    furniture
-			FuT_ending ="_furnitures.png";
+			//FuT_ending ="_furnitures.png";
 				/// Without furniture
-			//FuT_ending =".png"; 
+			FuT_ending =".png"; 
 
 			current_file=0;
 			init();			
@@ -242,7 +242,7 @@ class ROS_handler
 			cv::Mat DuDe_segmentation;
 
 				
-			if(true){
+			if(false){
 				double begin_process, end_process, decompose_time;
 				begin_process = getTime();
 				
@@ -584,8 +584,8 @@ class ROS_handler
 
 //			std::cout << "Full Average Precision: "<<  cum_precision/size_precision  << ", Full Average Recall: "<<  cum_recall/size_recall << std::endl;
 			std::cout << files_to_read.size();
-			printf(" files processed. Avg time: %.2f+%.2f, Avg Precision: %.1f%%+%.1f%%, Avg Recall %.1f%%+%.1f%% \n",
-					avg_time/1000, std_time, 
+			printf(" files processed. Avg time: %.0f+%.0f ms, Avg Precision: %.1f%%+%.1f%%, Avg Recall %.1f%%+%.1f%% \n",
+					avg_time, std_time, 
 			        avg_precision, std_precision,
 			        avg_recall, std_recall);
 
