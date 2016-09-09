@@ -124,7 +124,8 @@ class ROS_handler
 			else{
 							
 				std::cout << "Processing file  "<< *file_it << std::endl<< std::endl;
-				process_files(*file_it);
+//				process_files(*file_it);
+				process_files_incrementally(*file_it);
 
 				
 				std::cout << "Processed file  "<< *file_it << std::endl<< std::endl;
@@ -278,7 +279,7 @@ class ROS_handler
 			
 			///////// Original
 			cv::Mat GT_segmentation = segment_Ground_Truth(image_GT);			
-			colormap = save_image_original_color(saving_path + "_TAG" + gt_ending, GT_segmentation);
+			colormap = save_image_original_color(saving_path + "_TAG_inc" + gt_ending, GT_segmentation);
 			
 			
 			
@@ -300,7 +301,7 @@ class ROS_handler
 
 			Inc_Furniture.copyTo( proxy ,image_Furniture>250);						
 			Inc_Furniture = proxy.clone(); 
-			save_decomposed_image_color(saving_path + "_DuDe" + FuT_ending, Inc_Furniture, colormap, DuDe_Furn_map);  proxy = zero_image;
+			save_decomposed_image_color(saving_path + "_Inc" + FuT_ending, Inc_Furniture, colormap, DuDe_Furn_map);  proxy = zero_image;
 
 			Furn_Results_pixel.time = Furn_Results_Regions.time = decompose_time;
 			extract_results(Furn_Results_pixel, Furn_Results_Regions);
