@@ -203,17 +203,18 @@ class ROS_handler
 			Batch_segmentated = proxy.clone(); 
 
 			double min, max_batch, max_inc;
-			cv::minMaxLoc(Batch_segmentated, min, max_batch);
+			cv::minMaxLoc(Batch_segmentated, &min, &max_batch);
+			cv::minMaxLoc(image2save_Inc, &min, &max_inc);
 			
-			
-			
-			std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated);
-			save_decomposed_image_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc, colormap, Batch_Inc_map);
-			//*/
-			/*
-			std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc );
-			save_decomposed_image_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated, colormap, Batch_Inc_map);
-			*/
+			if (max_batch > max_inc  ){
+				std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated);
+				save_decomposed_image_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc, colormap, Batch_Inc_map);
+			}
+			else{
+				std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc );
+				save_decomposed_image_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated, colormap, Batch_Inc_map);
+			}
+
 			
 		}
 
