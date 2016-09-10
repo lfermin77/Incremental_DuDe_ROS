@@ -1,6 +1,7 @@
 //ROS
 #include "ros/ros.h"
 #include "nav_msgs/GetMap.h"
+#include "std_msgs/String.h"
 
 //openCV
 #include <cv_bridge/cv_bridge.h>
@@ -26,11 +27,15 @@ class ROS_handler
 		
 	std::string mapname_;
 	ros::Subscriber map_sub_;	
+	ros::Subscriber chat_sub_;	
 	ros::Timer timer;
 			
 	float Decomp_threshold_;
 	Incremental_Decomposer inc_decomp;
 	Stable_graph Stable;
+
+	cv::Mat image2save_clean, image2save_black, image2save_Inc;
+
 
 	std::vector <double> clean_time_vector, decomp_time_vector, paint_time_vector, complete_time_vector;
 
@@ -40,6 +45,7 @@ class ROS_handler
 		{
 			ROS_INFO("Waiting for the map");
 			map_sub_ = n.subscribe("map", 2, &ROS_handler::mapCallback, this); //mapname_ to include different name
+			chat_sub_ = n.subscribe("chatter", 1, &ROS_handler::chatCallback, this); 
 			timer = n.createTimer(ros::Duration(0.5), &ROS_handler::metronomeCallback, this);
 
 			image_pub_ = it_.advertise("/tagged_image", 1);			
@@ -90,6 +96,8 @@ class ROS_handler
 			black_image2.copyTo(black_image (first_rect));
 //*/			
 //			image_cleaned = clean_image2(received_image, black_image);
+//			image2save_clean = image_cleaned.clone();						
+			cv::flip(image_cleaned, image2save_clean,0);
 						
 			end_process = getTime();	occupancy_time = end_process - begin_process;
 
@@ -120,9 +128,12 @@ class ROS_handler
 			big(first_rect).copyTo(grad);
 
 //*/	
-			
-			grad = Stable.draw_stable_contour();	
+			cv::flip(black_image, black_image,0);
+			image2save_black = black_image.clone();
+			grad = Stable.draw_stable_contour() & ~black_image;	
 //			grad = image_cleaned;	
+
+			image2save_Inc = grad.clone();
 
 			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
 //			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
@@ -177,7 +188,34 @@ class ROS_handler
 		  publish_Image();
 		}
 
+////////////////
+		void chatCallback(const std_msgs::String& chat_msg){
+			std::cout << "chat in" << std::endl;
+			
+			std::string saving_path = "src/Incremental_DuDe_ROS/maps/Topological_Segmentation/";
+			cv::Mat proxy, zero =cv::Mat::zeros(image2save_clean.size(),CV_8U);
+			///////////
+				cv::Mat Batch_segmentated = simple_segment(image2save_clean);
+			//////////
+			std::map<int,int> Batch_Inc_map = compare_images(Batch_segmentated, image2save_Inc);
+			
+			Batch_segmentated.copyTo( proxy , ~image2save_black);						
+			Batch_segmentated = proxy.clone(); 
 
+			double min, max_batch, max_inc;
+			cv::minMaxLoc(Batch_segmentated, min, max_batch);
+			
+			
+			
+			std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated);
+			save_decomposed_image_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc, colormap, Batch_Inc_map);
+			//*/
+			/*
+			std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc );
+			save_decomposed_image_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated, colormap, Batch_Inc_map);
+			*/
+			
+		}
 
 
 ////////////////////////
@@ -302,6 +340,169 @@ class ROS_handler
 			cv::imwrite( full_path_decomposed , DuDe_segmentation_float );
 
 		}
+
+
+
+
+
+/////////////////////////////////////
+//// Evaluation
+//////////////////////////////////
+		typedef std::map <std::vector<int>, std::vector <cv::Point> > match2points;
+		typedef std::map <int, std::vector <cv::Point> > tag2points;
+		typedef std::map <int, tag2points> tag2tagMapper;
+
+
+	/////////////////
+		void save_decomposed_image_color(std::string path, cv::Mat image_in, std::vector <cv::Vec3b> colormap, std::map<int,int> original_map){
+			double min, max;
+			std::vector <cv::Vec3b> color_vector;
+			cv::Vec3b black(0, 0, 0);
+			color_vector.push_back(black);
+			
+			std::map<int,int>::iterator map_iter;
+			
+			cv::minMaxLoc(image_in, &min,&max);
+			color_vector.resize(max);
+
+			for(int i=1;i<= max; i++){
+				map_iter = original_map.find(i);
+				if (map_iter != original_map.end()){
+					int index_in_original = map_iter->second;
+					color_vector[i]=colormap[index_in_original];
+				}
+				else{		
+					cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+					color_vector[i] = color;
+				}
+			}
+			/////
+			cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
+			for(int i=0; i < image_in.rows; i++){
+				for(int j=0;j< image_in.cols; j++){
+					int color_index = image_in.at<uchar>(i,j);
+					image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}
+			cv::imwrite( path , image_float );
+
+
+
+		}
+
+	/////////////////
+		std::vector <cv::Vec3b> save_image_original_color(std::string path, cv::Mat image_in){
+
+			double min, max;			
+			std::vector <cv::Vec3b> color_vector;
+			cv::Vec3b black(0, 0, 0);
+			color_vector.push_back(black);
+			
+			cv::minMaxLoc(image_in, &min,&max);
+
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
+			for(int i=0; i < image_in.rows; i++){
+				for(int j=0;j< image_in.cols; j++){
+					int color_index = image_in.at<uchar>(i,j);
+					image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}
+			cv::imwrite( path , image_float );
+
+			return color_vector;
+		}
+
+
+	////////////////////
+		cv::Mat simple_segment(cv::Mat image_in){
+			Incremental_Decomposer inc_decomp;
+			Stable_graph Stable;
+			cv::Point2f origin(0,0);
+			float resolution = 0.05;
+
+			
+			cv::Mat pre_decompose = image_in.clone();
+			cv::Mat pre_decompose_BW = pre_decompose > 250;
+//			cv::Mat pre_decompose_BW = clean_image(pre_decompose > 250);
+
+
+			Stable = inc_decomp.decompose_image(pre_decompose_BW, Decomp_threshold_/resolution, origin , resolution);
+		
+				
+
+//			cv::Mat Segmentation = Stable.draw_stable_contour();
+			
+			cv::Mat Drawing = cv::Mat::zeros(image_in.size(), CV_8UC1);	
+			for(int i = 0; i < Stable.Region_contour.size();i++){
+				drawContours(Drawing, Stable.Region_contour, i, i+1, -1, 8);
+			}
+			std::cout << "Decomposition size: " << Stable.Region_contour.size() << std::endl;
+
+			return Drawing;
+		}
+
+
+	/////////////////////
+		std::map<int,int> compare_images(cv::Mat GT_segmentation_in, cv::Mat DuDe_segmentation_in){
+			
+			std::map<int,int> segmented2GT_tags;
+			
+			cv::Mat GT_segmentation   = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
+			cv::Mat DuDe_segmentation = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
+			
+			GT_segmentation_in  .convertTo(GT_segmentation, CV_8UC1);
+			DuDe_segmentation_in.convertTo(DuDe_segmentation, CV_8UC1);			
+			tag2tagMapper gt_tag2mapper,DuDe_tag2mapper;
+			
+			for(int x=0; x < GT_segmentation.size().width; x++){
+				for(int y=0; y < GT_segmentation.size().height; y++){
+					cv::Point current_pixel(x,y);
+										
+					int tag_GT   = GT_segmentation.at<uchar>(current_pixel);
+					int tag_DuDe  = DuDe_segmentation.at<uchar>(current_pixel);
+					
+					if(tag_DuDe>0 && tag_GT>0 ){
+						gt_tag2mapper  [tag_GT][tag_DuDe].push_back(current_pixel);
+						DuDe_tag2mapper[tag_DuDe][tag_GT].push_back(current_pixel);
+					}
+				}
+			}
+			
+
+
+			for( tag2tagMapper::iterator it = gt_tag2mapper.begin(); it!= gt_tag2mapper.end(); it++ ){
+				tag2points inside = it->second;
+				int max_intersection=0, total_points=0; 
+				int gt_tag_max = -1;
+				for( tag2points::iterator it2 = inside.begin(); it2!= inside.end(); it2++ ){
+					total_points += it2->second.size();
+					if (it2->second.size() > max_intersection){
+						max_intersection = it2->second.size();
+						gt_tag_max = it2->first;
+					}
+				}
+				segmented2GT_tags[gt_tag_max] = it->first;
+			}	
+					
+
+			for( tag2tagMapper::iterator it = DuDe_tag2mapper.begin(); it!= DuDe_tag2mapper.end(); it++ ){
+				tag2points inside = it->second;
+				int max_intersection=0, total_points=0; 
+				for( tag2points::iterator it2 = inside.begin(); it2!= inside.end(); it2++ ){
+					total_points += it2->second.size();
+					if (it2->second.size() > max_intersection) max_intersection = it2->second.size();
+				}
+			}			
+
+
+
+			return(segmented2GT_tags);
+		}
+
 
 
 

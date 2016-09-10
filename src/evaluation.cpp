@@ -170,7 +170,7 @@ class ROS_handler
 			std::string full_path_GT           = base_path + "/" + name + gt_ending;
 			std::string full_path_Furniture    = base_path + "/" + name + FuT_ending;
 			std::string full_path_No_Furniture = base_path + "/" + name + No_FuT_ending;
-			std::string saving_path       = base_path + "/Tagged_Images/" + name;
+			std::string saving_path            = base_path + "/Tagged_Images/" + name;
 
 			double begin_process, end_process, decompose_time;
 			std::vector <cv::Vec3b> colormap;

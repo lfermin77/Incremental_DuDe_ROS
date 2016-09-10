@@ -7,12 +7,12 @@
 		for(int i = 0; i < Region_contour.size();i++){
 			drawContours(Drawing, Region_contour, i, i+1, -1, 8);
 		}
-		cv::flip(Drawing,Drawing,0);
+		cv::flip(Drawing,Drawing,0);/*
 		for(int i = 0; i < Region_centroid.size();i++){
 			stringstream mix;      mix<<i;				std::string text = mix.str();
 			putText(Drawing, text, cv::Point(Region_centroid[i].x, image_size.height - Region_centroid[i].y ), 
 												cv::FONT_HERSHEY_SCRIPT_SIMPLEX, 0.5, Region_centroid.size()+1, 1, 8);
-		}	
+		}	*/
 		return Drawing;
 	}
 
