@@ -206,7 +206,7 @@ class ROS_handler
 			cv::minMaxLoc(Batch_segmentated, &min, &max_batch);
 			cv::minMaxLoc(image2save_Inc, &min, &max_inc);
 			
-			if (max_batch > max_inc  ){
+			if ( true ){
 				std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated);
 				save_decomposed_image_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc, colormap, Batch_Inc_map);
 			}
