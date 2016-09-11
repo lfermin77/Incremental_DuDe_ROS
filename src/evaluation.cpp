@@ -93,8 +93,9 @@ class ROS_handler
 			file_list = listFile();
 			file_it = file_list.begin();
 			
-			std::cout << "File to process:  "<< *file_it << std::endl<< std::endl;
 
+			std::cout << "File to process:  "<< *file_it << std::endl<< std::endl;
+			process_all_files();
 					
 		}
 
@@ -650,11 +651,11 @@ class ROS_handler
 		}
 
 	////////////////////
-		void process_all(){
+		void process_all_files(){
 			std::set<std::string> files_to_read = listFile();
 			
 
-			for (std::set<std::string>::iterator file_iter = files_to_read.begin() ; file_iter != files_to_read.begin() ; file_iter++){
+			for (std::set<std::string>::iterator file_iter = files_to_read.begin() ; file_iter != files_to_read.end() ; file_iter++){
 				std::cout << "Reading file  "<< *file_iter << std::endl<< std::endl<< std::endl<< std::endl;
 				process_files(*file_iter);
 				publish_Image();
