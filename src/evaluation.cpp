@@ -219,15 +219,24 @@ class ROS_handler
 
 			Furn_Results_pixel.time = Furn_Results_Regions.time = decompose_time;
 			extract_results(Furn_Results_pixel, Furn_Results_Regions);
+
+
 			
 			///////////////////////////
+			double min, max;
+			cv::minMaxLoc(GT_segmentation,&min,&max);
+			
+			float rows = GT_segmentation.rows;
+			float cols = GT_segmentation.cols;
+			float proper_size = rows*cols/1000;
+			proper_size = proper_size/1000;
 
 
 			std::cout << name;
-			printf(" No_Furniture Precision: %.1f Recall: %.1f time: %.0f \n",No_Furn_Results_pixel.precision, No_Furn_Results_pixel.recall, No_Furn_Results_pixel.time);
+			printf(" No_Furniture Precision: %.1f Recall: %.1f time: %.0f Labels %.0f size %.2f\n",No_Furn_Results_Regions.precision, No_Furn_Results_Regions.recall, No_Furn_Results_Regions.time, max, proper_size);
 
 			std::cout << name;
-			printf(" Furniture Precision: %.1f Recall: %.1f time: %.0f \n",Furn_Results_pixel.precision, Furn_Results_pixel.recall, Furn_Results_pixel.time);
+			printf(" Furniture Precision: %.1f Recall: %.1f time: %.0f Labels %.0f size %.2f\n",Furn_Results_Regions.precision, Furn_Results_Regions.recall, Furn_Results_Regions.time, max, proper_size);
 
 
 
@@ -644,8 +653,10 @@ class ROS_handler
 				cum_recall    += Recalls.back()[j];
 				size_recall++;
 			}
-			Regions.precision = cum_precision/size_precision;
-			Regions.recall    = cum_recall/size_recall;
+			Regions.precision = cum_precision/Precisions.back().size();
+			Regions.recall    = cum_recall/Recalls.back().size();
+
+
 //			Precisions.clear();
 //			Recalls.clear();
 		}
@@ -696,6 +707,9 @@ class ROS_handler
 
 
 
+
+
+
 			cum_precision=0, cum_quad_precision =0;
 			cum_recall=0, cum_quad_recall=0;
 			for(int i=0; i < Precisions.size();i++){
@@ -704,6 +718,7 @@ class ROS_handler
 					cum_inside_precision += Precisions[i][j];
 				}
 				cum_precision      += cum_inside_precision/Precisions[i].size();
+				std::cout << "current precision " <<  cum_inside_precision/Precisions[i].size() << std::endl;
 				cum_quad_precision += cum_inside_precision/Precisions[i].size()*cum_inside_precision/Precisions[i].size();
 			}			
 			size_precision=Precisions.size();
@@ -715,6 +730,7 @@ class ROS_handler
 				}
 				cum_recall 		+= cum_inside_recall/Recalls[i].size();
 				cum_quad_recall	+= cum_inside_recall/Recalls[i].size()*cum_inside_recall/Recalls[i].size();
+				std::cout << "current recall " <<  cum_inside_recall/Recalls[i].size() << std::endl;
 			}
 			size_recall=Recalls.size();
 
