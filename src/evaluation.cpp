@@ -124,12 +124,13 @@ class ROS_handler
 			else{
 							
 				std::cout << "Processing file  "<< *file_it << std::endl<< std::endl;
-//				process_files(*file_it);
-				process_files_incrementally(*file_it);
+				Precisions.clear();			Recalls.clear();
+				
+				process_files(*file_it);
+//				process_files_incrementally(*file_it);
 
 				
 				std::cout << "Processed file  "<< *file_it << std::endl<< std::endl;
-				//Print results
 
 
 				publish_Image();
@@ -177,8 +178,7 @@ class ROS_handler
 			results No_Furn_Results_pixel, No_Furn_Results_Regions;
 			results Furn_Results_pixel, Furn_Results_Regions;
 			
-			Precisions.clear();
-			Recalls.clear();
+
 
 
 			image_GT              = cv::imread(full_path_GT,0);   // Read the file
@@ -268,8 +268,6 @@ class ROS_handler
 			results No_Furn_Results_pixel, No_Furn_Results_Regions;
 			results Furn_Results_pixel, Furn_Results_Regions;
 			
-			Precisions.clear();
-			Recalls.clear();
 
 
 			image_GT              = cv::imread(full_path_GT,0);   // Read the file
@@ -456,6 +454,7 @@ class ROS_handler
 			std::vector<cv::Vec4i> hierarchy;
 			
 			cv::findContours( src, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+
 			
 			// iterate through all the top-level contours,
 			// draw each connected component with its own random color
@@ -635,6 +634,35 @@ class ROS_handler
 			float cum_precision=0;
 			float cum_recall=0;
 			int size_precision=0, size_recall=0;
+
+			for(int j=0; j < Precisions.back().size();j++){
+				cum_precision += Precisions.back()[j];
+				size_precision++;
+			}
+			for(int j=0; j < Recalls.back().size();j++){
+				cum_recall    += Recalls.back()[j];
+				size_recall++;
+			}
+			Regions.precision = cum_precision/size_precision;
+			Regions.recall    = cum_recall/size_recall;
+//			Precisions.clear();
+//			Recalls.clear();
+		}
+
+	////////////////////
+		void process_all(){
+			std::set<std::string> files_to_read = listFile();
+			
+
+			for (std::set<std::string>::iterator file_iter = files_to_read.begin() ; file_iter != files_to_read.begin() ; file_iter++){
+				std::cout << "Reading file  "<< *file_iter << std::endl<< std::endl<< std::endl<< std::endl;
+				process_files(*file_iter);
+				publish_Image();
+			}
+			
+			float cum_precision=0;
+			float cum_recall=0;
+			int size_precision=0, size_recall=0;
 			for(int i=0; i < Precisions.size();i++){
 				for(int j=0; j < Precisions[i].size();j++){
 					cum_precision += Precisions[i][j];
@@ -647,12 +675,15 @@ class ROS_handler
 					size_recall++;
 				}
 			}
-			Regions.precision = cum_precision/size_precision;
-			Regions.recall    = cum_recall/size_recall;
-			Precisions.clear();
-			Recalls.clear();
-		}
+			double this_precision = cum_precision/size_precision;
+			double this_recall    = cum_recall/size_recall;
+			
+			
+			printf(" Precision: %.1f Recall: %.1f  \n",this_precision, this_recall);
 
+			
+			
+		}
 
 };
 
