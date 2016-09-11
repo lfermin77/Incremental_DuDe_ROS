@@ -128,8 +128,8 @@ class ROS_handler
 				Precisions.clear();			Recalls.clear();
 				
 				process_files(*file_it);
-//				process_files_incrementally(*file_it);
-
+				process_files_incrementally(*file_it);
+//
 				
 				std::cout << "Processed file  "<< *file_it << std::endl<< std::endl;
 
@@ -297,7 +297,7 @@ class ROS_handler
 
 			Inc_No_Furniture.copyTo( proxy ,image_No_Furniture>250);						
 			Inc_No_Furniture = proxy.clone(); 
-			save_decomposed_image_color(saving_path + "_Inc" + No_FuT_ending, Inc_No_Furniture, colormap, DuDe_NoF_map); proxy = zero_image;
+//			save_decomposed_image_color(saving_path + "_Inc" + No_FuT_ending, Inc_No_Furniture, colormap, DuDe_NoF_map); proxy = zero_image;
 
 			No_Furn_Results_pixel.time = No_Furn_Results_Regions.time = decompose_time;
 			extract_results(No_Furn_Results_pixel, No_Furn_Results_Regions);
@@ -309,20 +309,27 @@ class ROS_handler
 
 			Inc_Furniture.copyTo( proxy ,image_Furniture>250);						
 			Inc_Furniture = proxy.clone(); 
-			save_decomposed_image_color(saving_path + "_Inc" + FuT_ending, Inc_Furniture, colormap, DuDe_Furn_map);  proxy = zero_image;
+//			save_decomposed_image_color(saving_path + "_Inc" + FuT_ending, Inc_Furniture, colormap, DuDe_Furn_map);  proxy = zero_image;
 
 			Furn_Results_pixel.time = Furn_Results_Regions.time = decompose_time;
 			extract_results(Furn_Results_pixel, Furn_Results_Regions);
 			
 			///////////////////////////
 
+			double min, max;
+			cv::minMaxLoc(GT_segmentation,&min,&max);
+			
+			float rows = GT_segmentation.rows;
+			float cols = GT_segmentation.cols;
+			float proper_size = rows*cols/1000;
+			proper_size = proper_size/1000;
+
 
 			std::cout << name;
-			printf(" No_Furniture Precision: %.1f Recall: %.1f time: %.0f \n",No_Furn_Results_pixel.precision, No_Furn_Results_pixel.recall, No_Furn_Results_pixel.time);
+			printf(" No_Furniture Precision: %.1f Recall: %.1f time: %.0f Labels %.0f size %.2f\n",No_Furn_Results_Regions.precision, No_Furn_Results_Regions.recall, No_Furn_Results_Regions.time, max, proper_size);
 
 			std::cout << name;
-			printf(" Furniture Precision: %.1f Recall: %.1f time: %.0f \n",Furn_Results_pixel.precision, Furn_Results_pixel.recall, Furn_Results_pixel.time);
-
+			printf(" Furniture Precision: %.1f Recall: %.1f time: %.0f Labels %.0f size %.2f\n",Furn_Results_Regions.precision, Furn_Results_Regions.recall, Furn_Results_Regions.time, max, proper_size);
 
 
 
