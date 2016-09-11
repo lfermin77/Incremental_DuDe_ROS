@@ -95,7 +95,7 @@ class ROS_handler
 			
 
 			std::cout << "File to process:  "<< *file_it << std::endl<< std::endl;
-			process_all_files();
+//			process_all_files();
 					
 		}
 
@@ -201,7 +201,7 @@ class ROS_handler
 
 			DuDe_No_Furniture.copyTo( proxy ,image_No_Furniture>250);						
 			DuDe_No_Furniture = proxy.clone(); 
-			save_decomposed_image_color(saving_path + "_DuDe" + No_FuT_ending, DuDe_No_Furniture, colormap, DuDe_NoF_map); proxy = zero_image;
+//			save_decomposed_image_color(saving_path + "_DuDe" + No_FuT_ending, DuDe_No_Furniture, colormap, DuDe_NoF_map); proxy = zero_image;
 
 			No_Furn_Results_pixel.time = No_Furn_Results_Regions.time = decompose_time;
 			extract_results(No_Furn_Results_pixel, No_Furn_Results_Regions);
@@ -215,7 +215,7 @@ class ROS_handler
 
 			DuDe_Furniture.copyTo( proxy ,image_Furniture>250);						
 			DuDe_Furniture = proxy.clone(); 
-			save_decomposed_image_color(saving_path + "_DuDe" + FuT_ending, DuDe_Furniture, colormap, DuDe_Furn_map);  proxy = zero_image;
+//			save_decomposed_image_color(saving_path + "_DuDe" + FuT_ending, DuDe_Furniture, colormap, DuDe_Furn_map);  proxy = zero_image;
 
 			Furn_Results_pixel.time = Furn_Results_Regions.time = decompose_time;
 			extract_results(Furn_Results_pixel, Furn_Results_Regions);
@@ -661,26 +661,78 @@ class ROS_handler
 				publish_Image();
 			}
 			
-			float cum_precision=0;
-			float cum_recall=0;
+			float cum_precision=0, cum_quad_precision =0;
+			float cum_recall=0, cum_quad_recall=0;
 			int size_precision=0, size_recall=0;
 			for(int i=0; i < Precisions.size();i++){
 				for(int j=0; j < Precisions[i].size();j++){
 					cum_precision += Precisions[i][j];
+					cum_quad_precision += Precisions[i][j]*Precisions[i][j];
 					size_precision++;
 				}
 			}			
 			for(int i=0; i < Recalls.size();i++){
 				for(int j=0; j < Recalls[i].size();j++){
 					cum_recall    += Recalls[i][j];
+					cum_quad_recall    += Recalls[i][j]*Recalls[i][j];
 					size_recall++;
 				}
 			}
 			double this_precision = cum_precision/size_precision;
 			double this_recall    = cum_recall/size_recall;
 			
+			double this_quad_precision = cum_quad_precision/size_precision;
+			double this_quad_recall    = cum_quad_recall/size_recall;
+
+			double std_precision = sqrt(this_quad_precision - this_precision*this_precision );
+			double std_recall = sqrt(this_quad_recall - this_recall*this_recall );
 			
-			printf(" Precision: %.1f Recall: %.1f  \n",this_precision, this_recall);
+			
+			
+			printf(" Precision: %.1f +/- %.1f, Recall: %.1f +/- %.1f \n",this_precision, std_precision, this_recall, std_recall);
+
+
+
+
+
+
+			cum_precision=0, cum_quad_precision =0;
+			cum_recall=0, cum_quad_recall=0;
+			for(int i=0; i < Precisions.size();i++){
+				float cum_inside_precision = 0;
+				for(int j=0; j < Precisions[i].size();j++){
+					cum_inside_precision += Precisions[i][j];
+				}
+				cum_precision      += cum_inside_precision/Precisions[i].size();
+				cum_quad_precision += cum_inside_precision/Precisions[i].size()*cum_inside_precision/Precisions[i].size();
+			}			
+			size_precision=Precisions.size();
+
+			for(int i=0; i < Recalls.size();i++){
+				float cum_inside_recall = 0;
+				for(int j=0; j < Recalls[i].size();j++){
+					cum_inside_recall    += Recalls[i][j];
+				}
+				cum_recall 		+= cum_inside_recall/Recalls[i].size();
+				cum_quad_recall	+= cum_inside_recall/Recalls[i].size()*cum_inside_recall/Recalls[i].size();
+			}
+			size_recall=Recalls.size();
+
+			this_precision = cum_precision/size_precision;
+			this_recall    = cum_recall/size_recall;
+			
+			this_quad_precision = cum_quad_precision/size_precision;
+			this_quad_recall    = cum_quad_recall/size_recall;
+			
+			std_precision = sqrt(this_quad_precision - this_precision*this_precision );
+			std_recall = sqrt(this_quad_recall - this_recall*this_recall );
+			
+			
+			
+			printf("separated Precision: %.1f +/- %.1f, Recall: %.1f +/- %.1f \n",this_precision, std_precision, this_recall, std_recall);
+
+
+
 
 			
 			
