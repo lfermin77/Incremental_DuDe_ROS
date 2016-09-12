@@ -76,16 +76,16 @@ class ROS_handler
 			cv::Point2f origin = cv::Point2f(map->info.origin.position.x, map->info.origin.position.y);
 
 			
-			cv::Rect first_rect = find_image_bounding_Rect(img); 
+			cv::Rect first_rect = find_image_bounding_Rect(received_image); 
 			float rect_area = (first_rect.height)*(first_rect.width);
-			float img_area = (img.rows) * (img.cols);
+			float img_area = (received_image.rows) * (received_image.cols);
 			cout <<"Area Ratio " <<  ( rect_area/img_area  )*100 <<"% "<< endl;
 			
 			cv::Mat cropped_img;
-			img(first_rect).copyTo(cropped_img); /////////// Cut the relevant image
+			received_image(first_rect).copyTo(cropped_img); /////////// Cut the relevant image
 
-			cv::Mat image_cleaned = cv::Mat::zeros(img.size(), CV_8UC1);
-			cv::Mat black_image   = cv::Mat::zeros(img.size(), CV_8UC1);
+			cv::Mat image_cleaned = cv::Mat::zeros(received_image.size(), CV_8UC1);
+			cv::Mat black_image   = cv::Mat::zeros(received_image.size(), CV_8UC1);
 
 //*
 			cv::Mat black_image2, image_cleaned2 = clean_image2(cropped_img, black_image2);
@@ -102,14 +102,14 @@ class ROS_handler
 			end_process = getTime();	occupancy_time = end_process - begin_process;
 
 
-//			Incremental_Decomposer inc_decomp_batch;
+//			Incremental_Decomposer inc_decomp_batch; //Uncoment to batch
 
 		///////////////////////// Decompose Image
 			begin_process = getTime();
 			
 		    try{
 				Stable = inc_decomp.decompose_image(image_cleaned, pixel_Tau, origin, map->info.resolution);
-//				Stable = inc_decomp_batch.decompose_image(image_cleaned, pixel_Tau, origin, map->info.resolution);
+//				Stable = inc_decomp_batch.decompose_image(image_cleaned, pixel_Tau, origin, map->info.resolution); //Uncoment to batch
 			}
 			catch (...)  {			}
 
@@ -459,9 +459,13 @@ class ROS_handler
 			DuDe_segmentation_in.convertTo(DuDe_segmentation, CV_8UC1);			
 			tag2tagMapper gt_tag2mapper,DuDe_tag2mapper;
 			
+			match2points links2points;
+			tag2points GT_points, DuDe_points;
+			
 			for(int x=0; x < GT_segmentation.size().width; x++){
 				for(int y=0; y < GT_segmentation.size().height; y++){
 					cv::Point current_pixel(x,y);
+					std::vector<int> match;
 										
 					int tag_GT   = GT_segmentation.at<uchar>(current_pixel);
 					int tag_DuDe  = DuDe_segmentation.at<uchar>(current_pixel);
@@ -469,10 +473,56 @@ class ROS_handler
 					if(tag_DuDe>0 && tag_GT>0 ){
 						gt_tag2mapper  [tag_GT][tag_DuDe].push_back(current_pixel);
 						DuDe_tag2mapper[tag_DuDe][tag_GT].push_back(current_pixel);
+						match.push_back(tag_DuDe);
+						match.push_back(tag_GT);
+						links2points[match].push_back(current_pixel);
+						GT_points[tag_GT].push_back(current_pixel);
+						DuDe_points[tag_DuDe].push_back(current_pixel);
+						
 					}
 				}
 			}
-			
+			/*
+			for(tag2points::iterator it = GT_points.begin(); it != GT_points.end(); it++)
+				std::cout << "GT "<<it->first<<", with size " <<it->second.size() << " size2  " << GT_points[it->first].size()  <<endl;
+			for(tag2points::iterator it = DuDe_points.begin(); it != DuDe_points.end(); it++)
+				std::cout << "DuDe "<<it->first<<", with size" <<it->second.size() << endl;
+			//*/
+
+			std::map <std::vector<int>, float > link2relation;
+			std::map<int,int> DuDe_Union_Match;
+			int current_DuDe_Tag=0;
+			int current_GT_max = -1;
+			int current_DuDe_evaluated = -1;
+			float current_GT_max_relation = -1;
+
+			for( match2points::iterator it = links2points.begin(); it!= links2points.end(); it++ ){
+				std::vector <cv::Point> points_in_match = it->second;
+
+				float A = GT_points  [ it->first[1] ].size();
+				float B = DuDe_points[ it->first[0] ].size();
+				float AandB = points_in_match.size();
+				float relation = AandB/( A + B - AandB );
+
+				link2relation[it->first] = relation;
+//				std::cout << "["<<it->first[0]<<","<<it->first[1]<<"] has "<< relation << endl;
+//				std::cout << "  AandB "<<AandB<<", A "<< A <<", B "<< B << endl;
+				
+				if(current_DuDe_evaluated != it->first[0] ){//update maximum
+					DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;
+//					std::cout << "    Maximum is ["<< current_DuDe_evaluated <<","<< current_GT_max <<"] with relation "<< current_GT_max_relation << endl;
+					current_DuDe_evaluated = it->first[0];
+					current_GT_max = it->first[1];
+					current_GT_max_relation = relation;
+				}
+				else if(relation > current_GT_max_relation){
+					current_GT_max = it->first[1];
+					current_GT_max_relation = relation;
+				}				
+			}
+			DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;
+//			std::cout << "    Maximum is ["<< current_DuDe_evaluated <<","<< current_GT_max <<"] with relation "<< current_GT_max_relation << endl;				
+			/*
 
 
 			for( tag2tagMapper::iterator it = gt_tag2mapper.begin(); it!= gt_tag2mapper.end(); it++ ){
@@ -500,8 +550,9 @@ class ROS_handler
 			}			
 
 
-
-			return(segmented2GT_tags);
+			//*/
+//			return(segmented2GT_tags);
+			return DuDe_Union_Match;
 		}
 
 

@@ -127,9 +127,10 @@ class ROS_handler
 				std::cout << "Processing file  "<< *file_it << std::endl<< std::endl;
 				Precisions.clear();			Recalls.clear();
 				
-				process_files(*file_it);
-				process_files_incrementally(*file_it);
-//
+//				process_files(*file_it);
+//				process_files_incrementally(*file_it);
+				process_files_twice(*file_it);
+
 				
 				std::cout << "Processed file  "<< *file_it << std::endl<< std::endl;
 
@@ -354,6 +355,98 @@ class ROS_handler
 
 		}
 
+	//////////////////////
+		void process_files_twice(std::string name){
+			cv::Mat image_GT, image_Furniture, image_No_Furniture;
+			cv::Mat Inc_Furniture, DuDe_Furniture;
+			cv::Mat proxy, zero_image;
+
+			std::string full_path_GT           = base_path + "/" + name + gt_ending;
+			std::string full_path_Furniture    = base_path + "/" + name + FuT_ending;
+			std::string full_path_No_Furniture = base_path + "/" + name + No_FuT_ending;
+			std::string saving_path       = base_path + "/Tagged_Images/" + name;
+
+			double begin_process, end_process, decompose_time;
+			std::vector <cv::Vec3b> colormap;
+			results No_Furn_Results_pixel, No_Furn_Results_Regions;
+			results Furn_Results_pixel, Furn_Results_Regions;
+			
+
+
+			image_GT              = cv::imread(full_path_GT,0);   // Read the file
+			image_Furniture       = cv::imread(full_path_Furniture,0);   // Read the file
+//			image_No_Furniture    = cv::imread(full_path_No_Furniture,0);   // Read the file
+			zero_image =cv::Mat::zeros(image_GT.size(),CV_8U);
+			
+			///////// Original
+			cv::Mat GT_segmentation = segment_Ground_Truth(image_GT);			
+			colormap = save_image_original_color(saving_path + "_TAG" + gt_ending, GT_segmentation);
+			
+			
+			
+			////////DuDe Furniture
+			DuDe_Furniture = simple_segment(image_Furniture);
+			std::map<int,int> DuDe_Furn_map = compare_images(GT_segmentation, 	DuDe_Furniture);			
+
+			DuDe_Furniture.copyTo( proxy , image_Furniture>250);						
+			DuDe_Furniture = proxy.clone(); 
+			save_decomposed_image_color(saving_path + "_DuDe" + FuT_ending, DuDe_Furniture, colormap, DuDe_Furn_map);  proxy = zero_image;
+
+			No_Furn_Results_pixel.time = No_Furn_Results_Regions.time = decompose_time;
+			extract_results(No_Furn_Results_pixel, No_Furn_Results_Regions);
+
+
+			////////Inc Furniture
+				Inc_Furniture = incremental_segment(image_Furniture, decompose_time);
+			std::map<int,int> Inc_Furn_map = compare_images(GT_segmentation, Inc_Furniture);
+
+			Inc_Furniture.copyTo( proxy ,image_Furniture>250);						
+			Inc_Furniture = proxy.clone(); 
+			save_decomposed_image_color(saving_path + "_Inc" + FuT_ending, Inc_Furniture, colormap, Inc_Furn_map);  proxy = zero_image;
+
+			Furn_Results_pixel.time = Furn_Results_Regions.time = decompose_time;
+			extract_results(Furn_Results_pixel, Furn_Results_Regions);
+			
+			///////////////////////////
+
+			double min, max;
+			cv::minMaxLoc(GT_segmentation,&min,&max);
+			
+			float rows = GT_segmentation.rows;
+			float cols = GT_segmentation.cols;
+			float proper_size = rows*cols/1000;
+			proper_size = proper_size/1000;
+
+
+			std::cout << name;
+			printf(" No_Furniture Precision: %.1f Recall: %.1f time: %.0f Labels %.0f size %.2f\n",No_Furn_Results_Regions.precision, No_Furn_Results_Regions.recall, No_Furn_Results_Regions.time, max, proper_size);
+
+			std::cout << name;
+			printf(" Furniture Precision: %.1f Recall: %.1f time: %.0f Labels %.0f size %.2f\n",Furn_Results_Regions.precision, Furn_Results_Regions.recall, Furn_Results_Regions.time, max, proper_size);
+
+
+
+
+			
+
+			/////////////
+			cv::Mat to_publish = image_GT.clone();
+			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish.convertTo(to_publish, CV_32F);
+			to_publish.copyTo(cv_ptr->image);////most important
+			////////////
+			cv::Mat to_publish2 = image_Furniture.clone();
+			cv_ptr2->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish2, CV_32F);
+			to_publish2.copyTo(cv_ptr2->image);////most important
+			///////////
+			cv::Mat to_publish3 = image_No_Furniture.clone();
+			cv_ptr3->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			to_publish2.convertTo(to_publish3, CV_32F);
+			to_publish3.copyTo(cv_ptr3->image);////most important
+			///////////
+			
+			segmentation_ready = true;
+
+		}
+
 
 
 	/////////////////////
@@ -429,6 +522,81 @@ class ROS_handler
 			Recalls.push_back   (recalls_inside);
 			return(segmented2GT_tags);
 		}
+
+
+	/////////////////////
+		std::map<int,int> compare_images2(cv::Mat GT_segmentation_in, cv::Mat DuDe_segmentation_in){
+			
+			std::map<int,int> segmented2GT_tags;
+			
+			cv::Mat GT_segmentation   = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
+			cv::Mat DuDe_segmentation = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
+			
+			GT_segmentation_in  .convertTo(GT_segmentation, CV_8UC1);
+			DuDe_segmentation_in.convertTo(DuDe_segmentation, CV_8UC1);			
+			tag2tagMapper gt_tag2mapper,DuDe_tag2mapper;
+			
+			match2points links2points;
+			tag2points GT_points, DuDe_points;
+			
+			for(int x=0; x < GT_segmentation.size().width; x++){
+				for(int y=0; y < GT_segmentation.size().height; y++){
+					cv::Point current_pixel(x,y);
+					std::vector<int> match;
+										
+					int tag_GT   = GT_segmentation.at<uchar>(current_pixel);
+					int tag_DuDe  = DuDe_segmentation.at<uchar>(current_pixel);
+					
+					if(tag_DuDe>0 && tag_GT>0 ){
+						gt_tag2mapper  [tag_GT][tag_DuDe].push_back(current_pixel);
+						DuDe_tag2mapper[tag_DuDe][tag_GT].push_back(current_pixel);
+						match.push_back(tag_DuDe);
+						match.push_back(tag_GT);
+						links2points[match].push_back(current_pixel);
+						GT_points[tag_GT].push_back(current_pixel);
+						DuDe_points[tag_DuDe].push_back(current_pixel);
+						
+					}
+				}
+			}
+
+			std::map <std::vector<int>, float > link2relation;
+			std::map<int,int> DuDe_Union_Match;
+			int current_DuDe_Tag=0;
+			int current_GT_max = -1;
+			int current_DuDe_evaluated = -1;
+			float current_GT_max_relation = -1;
+
+			for( match2points::iterator it = links2points.begin(); it!= links2points.end(); it++ ){
+				std::vector <cv::Point> points_in_match = it->second;
+
+				float A = GT_points  [ it->first[1] ].size();
+				float B = DuDe_points[ it->first[0] ].size();
+				float AandB = points_in_match.size();
+				float relation = AandB/( A + B - AandB );
+
+				link2relation[it->first] = relation;
+				
+				if(current_DuDe_evaluated != it->first[0] ){//update maximum
+					DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;
+					current_DuDe_evaluated = it->first[0];
+					current_GT_max = it->first[1];
+					current_GT_max_relation = relation;
+				}
+				else if(relation > current_GT_max_relation){
+					current_GT_max = it->first[1];
+					current_GT_max_relation = relation;
+				}				
+			}
+			DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;
+			return DuDe_Union_Match;
+		}
+
+
+
+
+
+
 
 	////////////////////
 		cv::Mat simple_segment(cv::Mat image_in){
