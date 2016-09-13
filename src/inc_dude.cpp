@@ -206,11 +206,18 @@ class ROS_handler
 			cv::minMaxLoc(Batch_segmentated, &min, &max_batch);
 			cv::minMaxLoc(image2save_Inc, &min, &max_inc);
 			
+			cv::Mat destroyable_batch = Batch_segmentated.clone();
+			std::vector<std::vector<cv::Point> > test_contour;
+			cv::findContours(destroyable_batch, test_contour, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
+
+			cv::Rect first_rect = cv::boundingRect(test_contour[0]);
+			for(int i=1; i < test_contour.size(); i++){
+				first_rect |= cv::boundingRect(test_contour[i]);
+			}
 			
-			cv::Rect first_rect = find_image_bounding_Rect(Batch_segmentated>0);
 			
 			cv::Mat cropped_Batch, cropped_Inc;
-			
+/*			
 			cv::Mat image_roi = Batch_segmentated(first_rect);
 			image_roi.copyTo(cropped_Batch);
 			
@@ -218,9 +225,9 @@ class ROS_handler
 			float rect_area = (first_rect.height)*(first_rect.width);
 			float img_area = (Batch_segmentated.rows) * (Batch_segmentated.cols);
 			cout <<"Area Ratio " <<  ( rect_area/img_area  )*100 <<"% "<< endl;
-			
+			*/
 			Batch_segmentated(first_rect).copyTo(cropped_Batch); /////////// Cut the relevant image
-//			image2save_Inc(first_rect).copyTo(cropped_Inc); /////////// Cut the relevant image
+			image2save_Inc(first_rect).copyTo(cropped_Inc); /////////// Cut the relevant image
 			
 			
 			
