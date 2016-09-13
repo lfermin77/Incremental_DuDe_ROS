@@ -391,7 +391,7 @@ class ROS_handler
 			////////DuDe Furniture
 			DuDe_Furniture = simple_segment(image_Furniture);
 			compare_images(GT_segmentation, 	DuDe_Furniture);			
-			std::map<int,int> DuDe_Furn_map = compare_images2(GT_segmentation, 	DuDe_Furniture);			
+			std::map<int,int> DuDe_Furn_map = compare_images(GT_segmentation, 	DuDe_Furniture);			
 
 			DuDe_Furniture.copyTo( proxy , image_Furniture>250);						
 			DuDe_Furniture = proxy.clone(); 
@@ -404,7 +404,7 @@ class ROS_handler
 			////////Inc Furniture
 				Inc_Furniture = incremental_segment(image_Furniture, decompose_time);
 			compare_images(GT_segmentation, Inc_Furniture);
-			std::map<int,int> Inc_Furn_map = compare_images2(GT_segmentation, Inc_Furniture);
+			std::map<int,int> Inc_Furn_map = compare_images(GT_segmentation, Inc_Furniture);
 
 			Inc_Furniture.copyTo( proxy ,image_Furniture>250);						
 			Inc_Furniture = proxy.clone(); 
@@ -757,7 +757,7 @@ class ROS_handler
 		void save_decomposed_image_color(std::string path, cv::Mat image_in, std::vector <cv::Vec3b> colormap, std::map<int,int> original_map){
 			double min, max;
 			std::vector <cv::Vec3b> color_vector;
-			cv::Vec3b black(0, 0, 0);
+			cv::Vec3b black(208, 208, 208);
 			color_vector.push_back(black);
 			
 			std::map<int,int>::iterator map_iter;
@@ -795,7 +795,7 @@ class ROS_handler
 
 			double min, max;			
 			std::vector <cv::Vec3b> color_vector;
-			cv::Vec3b black(0, 0, 0);
+			cv::Vec3b black(208, 208, 208);
 			color_vector.push_back(black);
 			
 			cv::minMaxLoc(image_in, &min,&max);

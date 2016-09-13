@@ -206,9 +206,27 @@ class ROS_handler
 			cv::minMaxLoc(Batch_segmentated, &min, &max_batch);
 			cv::minMaxLoc(image2save_Inc, &min, &max_inc);
 			
+			
+			cv::Rect first_rect = find_image_bounding_Rect(Batch_segmentated>0);
+			
+			cv::Mat cropped_Batch, cropped_Inc;
+			
+			cv::Mat image_roi = Batch_segmentated(first_rect);
+			image_roi.copyTo(cropped_Batch);
+			
+			
+			float rect_area = (first_rect.height)*(first_rect.width);
+			float img_area = (Batch_segmentated.rows) * (Batch_segmentated.cols);
+			cout <<"Area Ratio " <<  ( rect_area/img_area  )*100 <<"% "<< endl;
+			
+			Batch_segmentated(first_rect).copyTo(cropped_Batch); /////////// Cut the relevant image
+//			image2save_Inc(first_rect).copyTo(cropped_Inc); /////////// Cut the relevant image
+			
+			
+			
 			if ( true ){
-				std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Batch.png", Batch_segmentated);
-				save_decomposed_image_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc, colormap, Batch_Inc_map);
+				std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Batch.png", cropped_Batch);
+				save_decomposed_image_color(saving_path + chat_msg.data + "_Inc.png", cropped_Inc, colormap, Batch_Inc_map);
 			}
 			else{
 				std::vector <cv::Vec3b> colormap = save_image_original_color(saving_path + chat_msg.data + "_Inc.png", image2save_Inc );
@@ -358,7 +376,7 @@ class ROS_handler
 		void save_decomposed_image_color(std::string path, cv::Mat image_in, std::vector <cv::Vec3b> colormap, std::map<int,int> original_map){
 			double min, max;
 			std::vector <cv::Vec3b> color_vector;
-			cv::Vec3b black(0, 0, 0);
+			cv::Vec3b black(208, 208, 208);
 			color_vector.push_back(black);
 			
 			std::map<int,int>::iterator map_iter;
@@ -396,7 +414,7 @@ class ROS_handler
 
 			double min, max;			
 			std::vector <cv::Vec3b> color_vector;
-			cv::Vec3b black(0, 0, 0);
+			cv::Vec3b black(208, 208, 208);
 			color_vector.push_back(black);
 			
 			cv::minMaxLoc(image_in, &min,&max);
