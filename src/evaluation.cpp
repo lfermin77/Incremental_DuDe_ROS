@@ -198,7 +198,8 @@ class ROS_handler
 			begin_process = getTime();	
 				DuDe_No_Furniture = simple_segment(image_No_Furniture);
 			end_process = getTime();	decompose_time = end_process - begin_process;			
-			std::map<int,int> DuDe_NoF_map = compare_images(GT_segmentation, DuDe_No_Furniture);			
+			compare_images(GT_segmentation, DuDe_No_Furniture);			
+			std::map<int,int> DuDe_NoF_map = compare_images2(GT_segmentation, DuDe_No_Furniture);			
 
 			DuDe_No_Furniture.copyTo( proxy ,image_No_Furniture>250);						
 			DuDe_No_Furniture = proxy.clone(); 
@@ -212,7 +213,8 @@ class ROS_handler
 			begin_process = getTime();	
 				DuDe_Furniture = simple_segment(image_Furniture);
 			end_process = getTime();	decompose_time = end_process - begin_process;			
-			std::map<int,int> DuDe_Furn_map = compare_images(GT_segmentation, DuDe_Furniture);
+			compare_images(GT_segmentation, DuDe_Furniture);
+			std::map<int,int> DuDe_Furn_map = compare_images2(GT_segmentation, DuDe_Furniture);
 
 			DuDe_Furniture.copyTo( proxy ,image_Furniture>250);						
 			DuDe_Furniture = proxy.clone(); 
@@ -294,7 +296,8 @@ class ROS_handler
 			
 			////////No Furniture
 				Inc_No_Furniture = incremental_segment(image_No_Furniture, decompose_time);
-			std::map<int,int> DuDe_NoF_map = compare_images(GT_segmentation, Inc_No_Furniture);			
+			compare_images(GT_segmentation, Inc_No_Furniture);			
+			std::map<int,int> DuDe_NoF_map = compare_images2(GT_segmentation, Inc_No_Furniture);			
 
 			Inc_No_Furniture.copyTo( proxy ,image_No_Furniture>250);						
 			Inc_No_Furniture = proxy.clone(); 
@@ -305,8 +308,9 @@ class ROS_handler
 
 
 			////////Furniture
-				Inc_Furniture = incremental_segment(image_No_Furniture, decompose_time);
-			std::map<int,int> DuDe_Furn_map = compare_images(GT_segmentation, Inc_Furniture);
+				Inc_Furniture = incremental_segment(image_Furniture, decompose_time);
+			compare_images(GT_segmentation, Inc_Furniture);
+			std::map<int,int> DuDe_Furn_map = compare_images2(GT_segmentation, Inc_Furniture);
 
 			Inc_Furniture.copyTo( proxy ,image_Furniture>250);						
 			Inc_Furniture = proxy.clone(); 
@@ -386,7 +390,8 @@ class ROS_handler
 			
 			////////DuDe Furniture
 			DuDe_Furniture = simple_segment(image_Furniture);
-			std::map<int,int> DuDe_Furn_map = compare_images(GT_segmentation, 	DuDe_Furniture);			
+			compare_images(GT_segmentation, 	DuDe_Furniture);			
+			std::map<int,int> DuDe_Furn_map = compare_images2(GT_segmentation, 	DuDe_Furniture);			
 
 			DuDe_Furniture.copyTo( proxy , image_Furniture>250);						
 			DuDe_Furniture = proxy.clone(); 
@@ -398,7 +403,8 @@ class ROS_handler
 
 			////////Inc Furniture
 				Inc_Furniture = incremental_segment(image_Furniture, decompose_time);
-			std::map<int,int> Inc_Furn_map = compare_images(GT_segmentation, Inc_Furniture);
+			compare_images(GT_segmentation, Inc_Furniture);
+			std::map<int,int> Inc_Furn_map = compare_images2(GT_segmentation, Inc_Furniture);
 
 			Inc_Furniture.copyTo( proxy ,image_Furniture>250);						
 			Inc_Furniture = proxy.clone(); 
@@ -588,7 +594,7 @@ class ROS_handler
 					current_GT_max_relation = relation;
 				}				
 			}
-			DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;
+			DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;//last maximum
 			return DuDe_Union_Match;
 		}
 
