@@ -17,8 +17,40 @@ The requisites for [Dual Space decomposition]
 
 3. MPFR
 
+      $ sudo apt-get install libmpfr-dev
+      
 The requisites for ROS node
 
 1. [ROS Indigo](http://wiki.ros.org/indigo)
+
+
+### Instructions ###
+
+* OpenCV wrapper
+
+      Transform cv::Mat image into a set of to cv::Contours
+
+
+* inc_dude:
+
+      asdf
+      * Subscribed Topics
+            */map
+            */chatter
+      *Published Topics
+            */tagged_image
+
+* evaluation
+
+      sdf 
+
+
+
+
+
+
+
+
+
 
 
