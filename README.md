@@ -9,7 +9,9 @@ We transform the occupancy grid into a set of polygons, then we use the function
 
 The requisites for [Dual Space decomposition]
 
-*[CGAL library]: sudo apt-get install libcgal-dev
+*[CGAL library]: 
+
+sudo apt-get install libcgal-dev
 
 *[Freeglut](http://freeglut.sourceforge.net/)
 
