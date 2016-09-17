@@ -30,19 +30,27 @@ The requisites for ROS node
 
       Transform cv::Mat image into a set of to cv::Contours
 
+* ROS nodes
 
-* inc_dude:
+      * inc_dude:
 
-      asdf
-      * Subscribed Topics
-            */map
-            */chatter
-      *Published Topics
+            asdf
+            
+            * Subscribed Topics
+      
+                  */map
+            
+                  */chatter
+            
+            
+            *Published Topics
+      
             */tagged_image
+            
 
-* evaluation
+      * evaluation
 
-      sdf 
+            sdf 
 
 
 
