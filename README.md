@@ -40,7 +40,7 @@ The requisites for ROS node
 
 ### Related papers ###
 
-- L. Fermin, J. Neira and J.A. Castellanos. Incremental Contour-Based Topological Segmentation for Robot Exploration. IEEE International Conference on Robotics and Automation, 2017. (submitted)
+- L. Fermin, J. Neira and J.A. Castellanos. Incremental Contour-Based Topological Segmentation for Robot Exploration. IEEE International Conference on Robotics and Automation, 2017. (*submitted*)
 
 
 
