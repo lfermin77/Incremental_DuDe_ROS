@@ -35,7 +35,7 @@ The requisites for ROS node
       - ** inc_dude: ** 
             Transform occupancy grid msg in topic /map and publish the decomposition in the topic /tagged_image.  /chatter topic is used to save the image of the current decomposition.
             
-      -** evaluation: ** 
+      - ** evaluation: ** 
             Transform the images in the dataset and print the resulting images
 
 
