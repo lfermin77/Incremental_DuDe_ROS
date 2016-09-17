@@ -24,7 +24,7 @@ The requisites for ROS node
 1. [ROS Indigo](http://wiki.ros.org/indigo)
 
 
-### Instructions ###
+### Description ###
 
 - OpenCV wrapper
 
@@ -38,7 +38,9 @@ The requisites for ROS node
       - ** evaluation: ** 
             Transform the images in the dataset and print the resulting images
 
+### Related papers ###
 
+- L. Fermin, J. Neira and J.A. Castellanos. Incremental Contour-Based Topological Segmentation for Robot Exploration. IEEE International Conference on Robotics and Automation, 2017. (submitted)
 
 
 
