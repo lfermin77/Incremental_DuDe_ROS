@@ -1,44 +1,22 @@
-# README #
+# Incremental Contour Based Segmentation #
 
-Branch of the work on-progress
+Implementation of the Incremental Contour-Based Topological Segmentation  in structured or unstructured environments.
+We transform the occupancy grid into a set of polygons, then we use the function  [Dual Space Decomposition](http://masc.cs.gmu.edu/wiki/Dude2D) from to segment them. The incremental version only decompose the Differences in the Maps
 
 
-
-This README would normally document whatever steps are necessary to get your application up and running.
 
 ### Pre requisites ###
 
-for Dual Space decomposition
+The requisites for [Dual Space decomposition]
 
-CGAL library: sudo apt-get install libcgal-dev
+*[CGAL library]: sudo apt-get install libcgal-dev
 
- [freeglut](http://freeglut.sourceforge.net/)
+*[Freeglut](http://freeglut.sourceforge.net/)
 
-mpfr
+*[MPFR]
+
+The requisites for ROS node
+
+*[ROS Indigo](http://wiki.ros.org/indigo)
 
 
-### What is this repository for? ###
-
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
-
-### How do I get set up? ###
-
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
-
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact# dude_ros
