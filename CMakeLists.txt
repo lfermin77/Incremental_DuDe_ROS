@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(CGAL REQUIRED COMPONENTS Core)
 
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake_modules)
 find_package(MPFR)
 
 catkin_package(
@@ -41,8 +42,24 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/src/draw
   ${CGAL_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/include  
+  ${PROJECT_SOURCE_DIR}/FIST  
 )
 include(${CGAL_USE_FILE})
+
+
+
+
+######## Files from DuDe
+
+file(GLOB DuDe_SOURCES
+   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/src/*.cpp
+   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/src/skeleton/*.cpp
+   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/src/graph/*.cpp
+   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/src/draw/*.cpp
+
+)
+
+
 
 
 
@@ -51,11 +68,10 @@ include(${CGAL_USE_FILE})
 
 
 ######## inc_DuDe_ros
-add_executable(inc_dude src/inc_dude.cpp  include/wrapper.cpp include/inc_decomp.cpp)
+add_executable(inc_dude src/inc_dude.cpp  include/wrapper.cpp include/inc_decomp.cpp  ${DuDe_SOURCES})
 
 target_link_libraries(inc_dude
    ${catkin_LIBRARIES}
-   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/libdude2d.so
    ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/FIST/FIST.lib
    ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/FIST/libFIST.linux64.a
    ${CGAL_LIBRARIES} 
@@ -69,11 +85,10 @@ add_dependencies(inc_dude ${catkin_LIBRARIES} ${CGAL_LIBRARIES})
 
 
 ######## evaluation
-add_executable(evaluation src/evaluation.cpp  include/wrapper.cpp include/inc_decomp.cpp)
+add_executable(evaluation src/evaluation.cpp  include/wrapper.cpp include/inc_decomp.cpp  ${DuDe_SOURCES})
 
 target_link_libraries(evaluation
    ${catkin_LIBRARIES}
-   ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/libdude2d.so
    ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/FIST/FIST.lib
    ${PROJECT_SOURCE_DIR}/Third_Party/dude_final/FIST/libFIST.linux64.a
    ${CGAL_LIBRARIES} 
@@ -83,6 +98,10 @@ target_link_libraries(evaluation
 
 
 add_dependencies(evaluation ${catkin_LIBRARIES} ${CGAL_LIBRARIES})
+
+
+
+
 
 
 

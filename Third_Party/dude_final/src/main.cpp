@@ -37,7 +37,7 @@ void export_all_svg_files(vector<c_polygon*>& finalPolygonPieces);
 
 
 
-int main(int argc, char ** argv) 
+int dual_main(int argc, char ** argv) 
 {
 	if (!parseArg(argc, argv)) 
 	{
