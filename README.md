@@ -11,7 +11,7 @@ The requisites for [Dual Space decomposition]
 
 1. CGAL library:
 
-                $ sudo apt-get install libcgal-dev
+      $ sudo apt-get install libcgal-dev
 
 2. [Freeglut](http://freeglut.sourceforge.net/)
 
