@@ -96,6 +96,7 @@ class ROS_handler
 
 			std::cout << "File to process:  "<< *file_it << std::endl<< std::endl;
 //			process_all_files();
+			read_all_files();
 					
 		}
 
@@ -935,6 +936,22 @@ class ROS_handler
 			
 		}
 
+	////////////////////
+		void read_all_files(){
+			std::set<std::string> files_to_read = listFile();
+			
+
+			for (std::set<std::string>::iterator file_iter = files_to_read.begin() ; file_iter != files_to_read.end() ; file_iter++){
+				cv::Mat image_GT;
+				std::string full_path_GT           = base_path + "/" + *file_iter + gt_ending;
+				image_GT              = cv::imread(full_path_GT,0);   // Read the file
+	
+				float rows = image_GT.rows;
+				float cols = image_GT.cols;
+				
+				std::cout << "Reading file  "<< *file_iter << " Size  "<< rows*0.05 << "*"<< cols*0.05 << std::endl;			
+			}
+		}
 };
 
 
