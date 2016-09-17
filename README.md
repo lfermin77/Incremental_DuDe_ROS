@@ -9,16 +9,16 @@ We transform the occupancy grid into a set of polygons, then we use the function
 
 The requisites for [Dual Space decomposition]
 
-*[CGAL library]: 
+1. CGAL library: 
 
 sudo apt-get install libcgal-dev
 
-*[Freeglut](http://freeglut.sourceforge.net/)
+2. [Freeglut](http://freeglut.sourceforge.net/)
 
-*[MPFR]
+3. MPFR
 
 The requisites for ROS node
 
-*[ROS Indigo](http://wiki.ros.org/indigo)
+1. [ROS Indigo](http://wiki.ros.org/indigo)
 
 
