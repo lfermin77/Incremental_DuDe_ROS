@@ -20,6 +20,7 @@ The requisites for [Dual Space decomposition]
       $ sudo apt-get install libmpfr-dev
       
 The requisites for the OpenCV wrapper
+
       [OpenCV](http://opencv.org/)
       
 The requisites for ROS node
