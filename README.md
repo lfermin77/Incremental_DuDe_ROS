@@ -23,7 +23,7 @@ The requisites for the OpenCV wrapper
 
 1. [OpenCV](http://opencv.org/)
       
-The requisites for ROS node
+The requisites for ROS nodes
 
 1. [ROS Indigo](http://wiki.ros.org/indigo)
 
