@@ -21,7 +21,7 @@ The requisites for [Dual Space decomposition]
       
 The requisites for the OpenCV wrapper
 
-      [OpenCV](http://opencv.org/)
+1. [OpenCV](http://opencv.org/)
       
 The requisites for ROS node
 
