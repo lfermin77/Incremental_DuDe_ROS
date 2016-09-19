@@ -31,11 +31,11 @@ The requisites for ROS node
 
 - OpenCV Wrapper
 
-      Transform *cv::Mat* image into a set of to *cv::Contours* and decompose it using [DuDe](http://masc.cs.gmu.edu/wiki/Dude2D).*Don't need ROS*
+      Transform *cv::Mat* image into a set of to *cv::Contours* and decompose it using [DuDe](http://masc.cs.gmu.edu/wiki/Dude2D).*"Don't need ROS"*
       
 - Incremental Decomposition
 
-      Transform occupancy grid into an OpenCV binary image, then compared to the previous decompostion to obtain a difference image to be decomposed with OpenCV Wrapper.
+      Transform occupancy grid into an OpenCV binary image, it then compares it to the previous decompostion to obtain a difference image to be decomposed with OpenCV Wrapper.
 
 - ROS nodes
 
