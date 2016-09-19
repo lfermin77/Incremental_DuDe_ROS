@@ -47,7 +47,7 @@ The requisites for ROS nodes
             $ rosrun inc_dude inc_dude 3
             
       - **evaluation:** 
-            Transform the images in the dataset and print the resulting images. Images are published in the topics */ground_truth_segmentation*, */DuDe_segmentation*, */inc_dude_segmentation*. The topic */cmd_vel* used to cycle the images: *up* cycle, *down* process
+            Transform the images in the dataset and print the resulting images. Images are published in the topics */ground_truth_segmentation*, */DuDe_segmentation*, */inc_dude_segmentation*. The topic */cmd_vel* is used to cycle the images: *up* cycle, *down* process
             
             $ roscd && cd ..
             $ rosrun inc_dude evaluation 3
