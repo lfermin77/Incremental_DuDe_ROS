@@ -96,7 +96,7 @@ class ROS_handler
 
 			std::cout << "File to process:  "<< *file_it << std::endl<< std::endl;
 //			process_all_files();
-			read_all_files();
+//			read_all_files();
 					
 		}
 
