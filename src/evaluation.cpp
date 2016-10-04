@@ -603,7 +603,6 @@ class ROS_handler
 
 
 
-
 	////////////////////
 		cv::Mat simple_segment(cv::Mat image_in){
 			Incremental_Decomposer inc_decomp;

@@ -36,7 +36,7 @@ void export_individual_svg_files(vector<c_polygon*>& finalPolygonPieces);
 void export_all_svg_files(vector<c_polygon*>& finalPolygonPieces);
 
 
-
+/*
 int dual_main(int argc, char ** argv) 
 {
 	if (!parseArg(argc, argv)) 
@@ -84,7 +84,7 @@ int dual_main(int argc, char ** argv)
 
 	return 0;
 }
-
+*/
 ///////////////////////////////////////////////////////////////////////////
 //debug
 void save_cut()
@@ -138,7 +138,7 @@ void loda_cuts(vector<c_polygon*>& finalPolygonPieces)
 
 }
 ///////////////////////////////////////////////////////////////////////////
-
+//*/
 
 void decompose(vector<c_polygon*>& finalPolygonPieces)
 {

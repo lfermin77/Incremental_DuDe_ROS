@@ -2,6 +2,40 @@
 
 
 
+DuDe_OpenCV_wrapper::DuDe_OpenCV_wrapper(){
+    Area_threshold=5; 
+    dude= c_dude();
+	tolerance_in_pixels= false;	    
+	g_tau= 0.2;
+    g_tau_pixel=60; //60 pixels
+}
+
+DuDe_OpenCV_wrapper::~DuDe_OpenCV_wrapper(){
+	for(int i=0; i < finalPolygonPieces.size(); i++){
+		c_polygon* current_polygon = finalPolygonPieces[i];
+		current_polygon->destroy();
+	}
+	finalPolygonPieces.clear();
+	dude.clear();
+	
+	for(int i=0; i < 	draw_decoration.allFeaturePMs.size(); i++){
+		ply_vertex* current_ply = 	draw_decoration.allFeaturePMs[i];
+	//		current_ply->destroy();
+	}
+	draw_decoration.allFeaturePMs.clear();
+		
+	for(int i=0; i < draw_decoration.allAccumulatedCuts.size(); i++){
+		c_diagonal current_diagonal = draw_decoration.allAccumulatedCuts[i];
+	//		current_diagonal->destroy();
+	}	
+	draw_decoration.allAccumulatedCuts.clear();	
+
+	draw_decoration.se.destroy();
+}
+
+
+
+
 ///////////////////////////////////
 void DuDe_OpenCV_wrapper::insert_contour_to_poly(std::vector<cv::Point> contour_in, 	c_ply& polygon ){
 

@@ -34,11 +34,12 @@ public:
 	float g_tau_pixel;// tolerance in pixels
 	bool tolerance_in_pixels;
 	
+	// DuDe Related
 	c_dude dude;
 	Draw_Decoration draw_decoration;		
-
 	vector<c_polygon*> finalPolygonPieces; //the result polygons, they can be exported as individual files	
-
+	//////
+	
 	std::vector<cv::Point> Parent_contour;
 	
 //	Nodes
@@ -51,16 +52,10 @@ public:
 	std::vector<std::set<int> > diagonal_connections;
 	
 	
-	DuDe_OpenCV_wrapper(){
-	    Area_threshold=5; 
-	    dude= c_dude();
-		tolerance_in_pixels= false;	    
-		g_tau= 0.2;
-	    g_tau_pixel=60; //60 pixels
-	}
+	DuDe_OpenCV_wrapper();
 	
-	~DuDe_OpenCV_wrapper(){
-	}
+	~DuDe_OpenCV_wrapper();
+	
 
 	///////////////////////////////////
 	void set_Tau(float decomp_th ){g_tau=decomp_th;tolerance_in_pixels=false;}
