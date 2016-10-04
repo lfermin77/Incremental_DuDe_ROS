@@ -19,6 +19,13 @@ c_BPC::c_BPC()
     m_pre=NULL;
 }
 
+c_BPC::~c_BPC(){
+	int a=1;
+}
+
+
+
+
 
 //
 // build: determine the order of bridge vertices and compute the length of pocket

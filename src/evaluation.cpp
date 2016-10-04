@@ -82,7 +82,8 @@ class ROS_handler
 			cv_ptr3->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
 			
 
-			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
+//			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
+			base_path = "/home/leonardo/ROS_Indigo/catkin_ws/src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
 			gt_ending = "_gt_segmentation.png";
 				/// With    furniture
 			FuT_ending ="_furnitures.png";
@@ -97,6 +98,7 @@ class ROS_handler
 			std::cout << "File to process:  "<< *file_it << std::endl<< std::endl;
 //			process_all_files();
 //			read_all_files();
+			process_files(*file_it);
 					
 		}
 
@@ -971,7 +973,9 @@ int main(int argc, char **argv)
 	if (argc ==2){ decomp_th = atof(argv[1]); }	
 	
 	ROS_handler mg(decomp_th);
-	ros::spin();
+//	ros::spin();
+	
+	std::cout << " Final " << std::endl;
 	
 	return 0;
 }

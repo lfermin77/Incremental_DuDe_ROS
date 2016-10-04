@@ -15,6 +15,7 @@ class c_dude
 {
 public:
 	c_dude(){}
+	~c_dude();
 
 	void clear();
 

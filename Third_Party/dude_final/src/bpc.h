@@ -8,6 +8,7 @@ class c_BPC //a class for bridge pocket  and concavity
 public:
 
     c_BPC();
+    ~c_BPC();
 
 
     //

@@ -11,6 +11,11 @@
 
     ///////////////////////////////////////////////////////////////////////////////
     
+	c_plyline::~c_plyline(){
+		destroy();
+	}
+    
+    
     //copy from c_ply
     c_plyline::c_plyline(c_ply& ply)
     {

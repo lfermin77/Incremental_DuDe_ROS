@@ -118,7 +118,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     ply_vertex(){ init(); }
     ply_vertex( const Point2d& p ){ pos=p; init(); }
-    virtual ~ply_vertex();
+     ~ply_vertex();
     void setNext(ply_vertex * n){next=n; if(n!=NULL) n->pre=this; }
     void setPre(ply_vertex * n){pre=n; if(n!=NULL) n->next=this; }
     void computeExtraInfo();
@@ -184,6 +184,8 @@ class c_ply{
 public:
 
     enum POLYTYPE { UNKNOWN, PIN, POUT };
+    
+    ~c_ply();
 
     ///////////////////////////////////////////////////////////////////////////
     c_ply(POLYTYPE t){ head=tail=NULL; type=t; radius=-1; area=-FLT_MAX; canBeIgnored = false;}

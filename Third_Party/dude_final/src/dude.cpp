@@ -30,6 +30,9 @@ int HOLELINEAPPROXPARA = 1;
 #define REDUCEPOCKETMINIMUM true
 
 
+c_dude::~c_dude(){
+	clear();
+}
 
 void c_dude::build(c_polygon& P, double tau, bool isInitPolygon)
 {

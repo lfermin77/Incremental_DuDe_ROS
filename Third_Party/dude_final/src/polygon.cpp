@@ -76,6 +76,8 @@ ply_vertex * ply_vertex_extra::getDihedralNext()
 ply_vertex::~ply_vertex()
 {
     //doing nothing for now
+    
+    
 }
 
 // - compute normal
@@ -156,6 +158,13 @@ float ply_vertex::distanceTo(ply_vertex* other)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+c_ply::~c_ply(){
+	destroy();
+}
+
+
+
 
 //copy from the given ply
 void c_ply::copy(const c_ply& other)

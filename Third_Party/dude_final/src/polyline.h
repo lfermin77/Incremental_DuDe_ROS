@@ -22,6 +22,7 @@
         
         c_plyline(c_ply& ply);
 
+		~c_plyline();
         ///////////////////////////////////////////////////////////////////////////
         void copy(const c_plyline& plyline); //copy from the other ply
         void destroy();
