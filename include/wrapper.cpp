@@ -16,7 +16,7 @@ DuDe_OpenCV_wrapper::~DuDe_OpenCV_wrapper(){
 		current_polygon->destroy();
 	}
 	finalPolygonPieces.clear();
-	dude.clear();
+//	dude.clear();
 	
 	for(int i=0; i < 	draw_decoration.allFeaturePMs.size(); i++){
 		ply_vertex* current_ply = 	draw_decoration.allFeaturePMs[i];

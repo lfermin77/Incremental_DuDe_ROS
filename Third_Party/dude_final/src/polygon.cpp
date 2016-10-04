@@ -160,7 +160,7 @@ float ply_vertex::distanceTo(ply_vertex* other)
 ///////////////////////////////////////////////////////////////////////////////
 
 c_ply::~c_ply(){
-	destroy();
+//	destroy();
 }
 
 

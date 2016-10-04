@@ -31,8 +31,79 @@ int HOLELINEAPPROXPARA = 1;
 
 
 c_dude::~c_dude(){
-	clear();
+//*
+	for( list<c_BPC *>::iterator iter = m_bpcs.begin(); iter != m_bpcs.end(); iter++){
+		c_BPC * current = (*iter);
+		delete current;
+	}
+	m_bpcs.clear();
+	//////
+		m_reduced_P.clear();    
+		m_simpilifed_P.clear(); 
+	    m_cutsets.clear();  
+        m_diagonals.clear(); 
+		m_cuts.clear(); 
+		holeCutDiagonals.clear();
+	////////////
+/*
+	for( list<ply_vertex *>::iterator iter = m_PMs.begin(); iter != m_PMs.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+    m_PMs.clear();    
+	////////////
+	for( list<ply_vertex *>::iterator iter = hole_PMs.begin(); iter != hole_PMs.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	hole_PMs.clear();
+	////////////
+	for( list<ply_vertex *>::iterator iter = holeFeatPnts.begin(); iter != holeFeatPnts.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	holeFeatPnts.clear();
+	////////////
+	for( list<ply_vertex *>::iterator iter = convexFeatPnts.begin(); iter != convexFeatPnts.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	convexFeatPnts.clear();
+	////////////
+	for( list<ply_vertex *>::iterator iter = poutFeatPnts.begin(); iter != poutFeatPnts.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	poutFeatPnts.clear();
+	////////////
+	for( list<ply_vertex *>::iterator iter = totalFeatPnts.begin(); iter != totalFeatPnts.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	totalFeatPnts.clear();
+	////////////
+	for( list<ply_vertex *>::iterator iter = combine_PMs.begin(); iter != combine_PMs.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	combine_PMs.clear();
+	////////////
+	for( vector<ply_vertex *>::iterator iter = bpcStartPnts.begin(); iter != bpcStartPnts.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	bpcStartPnts.clear();
+	////////////
+	for( vector<ply_vertex *>::iterator iter = bpcEndPnts.begin(); iter != bpcEndPnts.end(); iter++){
+		ply_vertex * current = (*iter);
+		delete current;
+	}
+	bpcEndPnts.clear();
+
+//*/
+
 }
+
 
 void c_dude::build(c_polygon& P, double tau, bool isInitPolygon)
 {
@@ -886,6 +957,7 @@ void c_dude::decompose_bridge(c_BPC * bpc)
         bpc->addKid(bpc2);
 
     }//end j
+    delete dude2;
 }
 
 //

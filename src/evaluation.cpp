@@ -83,7 +83,7 @@ class ROS_handler
 			
 
 //			base_path = "src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
-			base_path = "/home/leonardo/ROS_Indigo/catkin_ws/src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
+			base_path = "/home/unizar/ROS_Indigo/catkin_ws/src/Incremental_DuDe_ROS/maps/Room_Segmentation/all_maps";
 			gt_ending = "_gt_segmentation.png";
 				/// With    furniture
 			FuT_ending ="_furnitures.png";
