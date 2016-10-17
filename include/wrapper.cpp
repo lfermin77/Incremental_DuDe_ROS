@@ -11,10 +11,11 @@ DuDe_OpenCV_wrapper::DuDe_OpenCV_wrapper(){
 }
 
 DuDe_OpenCV_wrapper::~DuDe_OpenCV_wrapper(){
+	/*
 	for(int i=0; i < finalPolygonPieces.size(); i++){
 		c_polygon* current_polygon = finalPolygonPieces[i];
 		current_polygon->destroy();
-	}
+	}*/
 	finalPolygonPieces.clear();
 //	dude.clear();
 	

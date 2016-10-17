@@ -87,6 +87,7 @@ int dual_main(int argc, char ** argv)
 */
 ///////////////////////////////////////////////////////////////////////////
 //debug
+/*
 void save_cut()
 {
 
@@ -98,6 +99,8 @@ void save_cut()
 	}
 	ofile.close();
 }
+
+
 void loda_cuts(vector<c_polygon*>& finalPolygonPieces)
 {
 	c_polygon* p1 = new c_polygon();//, p2;
@@ -138,7 +141,7 @@ void loda_cuts(vector<c_polygon*>& finalPolygonPieces)
 
 }
 ///////////////////////////////////////////////////////////////////////////
-//*/
+///
 
 void decompose(vector<c_polygon*>& finalPolygonPieces)
 {
@@ -174,7 +177,7 @@ void decompose(vector<c_polygon*>& finalPolygonPieces)
 	}
 
 }
-
+*/
 void export_files(vector<c_polygon*>& finalPolygonPieces)
 {
 	//export decomposed polygons

@@ -1,6 +1,7 @@
 #ifndef _DUDE_USE_H_
 #define _DUDE_USE_H_
 
+#include <memory>
 #include "dude.h"
 #include "dude_cut.h"
 #include "polygon.h"
@@ -32,7 +33,7 @@ public:
 
 void extractSkeletonFromDiagonals(c_polygon& initPolygon, vector<c_diagonal>& initCuts,vector<c_polygon*>& finalPolygonPieces, SE2d& se, bool bExtractSkeleton=false);
 
-void iterativeDecompose(c_polygon& initPolygon, vector<c_diagonal>& initCuts,double tau, vector<c_polygon*>& finalPolygonPieces,
+void iterativeDecompose(c_polygon& initPolygon, vector<c_diagonal>& initCuts,double tau, vector < shared_ptr< c_polygon> >& finalPolygonPieces,
 		vector<c_diagonal>& finalAllCuts, SE2d& se, bool bExtractSkeleton);
 
 void decomposeMoreTimes(c_polygon& initPolygon, vector<c_diagonal>& initCuts,double tau, vector<c_polygon*>& finalPolygonPieces,

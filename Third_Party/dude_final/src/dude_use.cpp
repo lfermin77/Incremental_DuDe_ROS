@@ -393,7 +393,7 @@ void extractSkeletonFromDiagonals(c_polygon& initPolygon, vector<c_diagonal>& in
 
 }
 
-void iterativeDecompose(c_polygon& initPolygon, vector<c_diagonal>& initCuts,double tau, vector<c_polygon*>& finalPolygonPieces,
+void iterativeDecompose(c_polygon& initPolygon, vector<c_diagonal>& initCuts,double tau, vector < shared_ptr< c_polygon> >& finalPolygonPieces,
 		vector<c_diagonal>& finalAllCuts, SE2d& se, bool bExtractSkeleton)
 {
 	float tempTau = tau;
@@ -430,6 +430,7 @@ void iterativeDecompose(c_polygon& initPolygon, vector<c_diagonal>& initCuts,dou
 		for(vector<c_polygon*>::iterator pvit = olist.begin(); pvit != olist.end(); ++pvit)
 		{
 			c_polygon* tmpPolygon = *pvit;
+//			shared_ptr< c_polygon> pepe;
 
 			c_dude tmpDude;
 			tmpDude.build(*tmpPolygon, tempTau, true);
@@ -455,7 +456,7 @@ void iterativeDecompose(c_polygon& initPolygon, vector<c_diagonal>& initCuts,dou
 			{
 				reInitializePolygon(*tmpPolygon);
 
-				finalPolygonPieces.push_back(tmpPolygon);
+//				finalPolygonPieces.push_back(tmpPolygon);
 			}
 		}
 

@@ -1,3 +1,6 @@
+//Memory
+#include <memory>
+
 //openCV
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -37,7 +40,8 @@ public:
 	// DuDe Related
 	c_dude dude;
 	Draw_Decoration draw_decoration;		
-	vector<c_polygon*> finalPolygonPieces; //the result polygons, they can be exported as individual files	
+//	vector<c_polygon*> finalPolygonPieces; //the result polygons, they can be exported as individual files	
+	vector< shared_ptr< c_polygon> > finalPolygonPieces; //the result polygons, they can be exported as individual files	
 	//////
 	
 	std::vector<cv::Point> Parent_contour;
