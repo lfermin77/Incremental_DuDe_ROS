@@ -581,6 +581,31 @@ class ROS_handler
 		}
 
 
+	/////////////////
+		std::vector <cv::Vec3b> save_image_color( cv::Mat image_in){
+
+			double min, max;			
+			std::vector <cv::Vec3b> color_vector;
+			cv::Vec3b black(208, 208, 208);
+			color_vector.push_back(black);
+			
+			cv::minMaxLoc(image_in, &min,&max);
+
+			for(int i=0;i<= max; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector.push_back(color);
+			}
+			cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
+			for(int i=0; i < image_in.rows; i++){
+				for(int j=0;j< image_in.cols; j++){
+					int color_index = image_in.at<uchar>(i,j);
+					image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}
+
+			return color_vector;
+		}
+
 
 
 
