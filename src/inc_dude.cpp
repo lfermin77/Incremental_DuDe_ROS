@@ -35,7 +35,9 @@ class ROS_handler
 	Stable_graph Stable;
 
 	cv::Mat image2save_clean, image2save_black, image2save_Inc;
-
+	
+	cv::Mat previous_image;
+	std::vector <cv::Vec3b> colormap;
 
 	std::vector <double> clean_time_vector, decomp_time_vector, paint_time_vector, complete_time_vector;
 
@@ -50,7 +52,8 @@ class ROS_handler
 
 			image_pub_ = it_.advertise("/tagged_image", 1);			
 			cv_ptr.reset (new cv_bridge::CvImage);
-			cv_ptr->encoding = "mono8";
+//			cv_ptr->encoding = "mono8";
+			cv_ptr->encoding = "bgr8";
 						
 		}
 
@@ -133,11 +136,26 @@ class ROS_handler
 			grad = Stable.draw_stable_contour() & ~black_image;	
 //			grad = image_cleaned;	
 
-			image2save_Inc = grad.clone();
+//			std::vector <cv::Vec3b> new_colormap;
+			if(colormap.size()==0){
+				colormap = convert_image_to_color( grad, &image2save_Inc);
+			}
+			else{
+//				new_colormap = convert_image_to_color( grad, &image2save_Inc);
+				std::map<int,int> original_map = compare_images(previous_image, grad );
+				paint_with_previous_color( grad, &colormap,  original_map, &image2save_Inc);
+			}
+			
+			
+			previous_image = grad.clone();
 
-			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
+
+//			image2save_Inc = grad.clone();
+
+//			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
 //			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
-			grad.copyTo(cv_ptr->image);////most important
+//			grad.copyTo(cv_ptr->image);////most important
+			image2save_Inc.copyTo(cv_ptr->image);////most important
 
 			end_process = getTime();	drawPublish_time = end_process - begin_process;
 			whole_time = end_process - begin_whole;
@@ -582,7 +600,7 @@ class ROS_handler
 
 
 	/////////////////
-		std::vector <cv::Vec3b> save_image_color( cv::Mat image_in){
+		std::vector <cv::Vec3b> convert_image_to_color( cv::Mat image_in, cv::Mat *image_out){
 
 			double min, max;			
 			std::vector <cv::Vec3b> color_vector;
@@ -603,9 +621,48 @@ class ROS_handler
 				}
 			}
 
+			*image_out= image_float.clone();
 			return color_vector;
 		}
 
+
+
+	////////////////
+	void paint_with_previous_color( cv::Mat image_in, std::vector <cv::Vec3b> *colormap, std::map<int,int> original_map, cv::Mat *image_out){
+			double min, max;
+			std::vector <cv::Vec3b> color_vector;
+			cv::Vec3b black(208, 208, 208);
+			color_vector.push_back(black);
+			
+			std::map<int,int>::iterator map_iter;
+			
+			cv::minMaxLoc(image_in, &min,&max);
+			color_vector.resize(max);
+
+			for(int i=1;i<= max; i++){
+				map_iter = original_map.find(i);
+				if (map_iter != original_map.end()){
+					int index_in_original = map_iter->second;
+					color_vector[i]=(*colormap)[index_in_original];
+				}
+				else{		
+					cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+					color_vector[i] = color;
+				}
+			}
+			/////
+			cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
+			for(int i=0; i < image_in.rows; i++){
+				for(int j=0;j< image_in.cols; j++){
+					int color_index = image_in.at<uchar>(i,j);
+					image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+				}
+			}
+			*image_out = image_float.clone();
+
+
+
+		}
 
 
 
