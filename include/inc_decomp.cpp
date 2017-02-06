@@ -7,6 +7,13 @@ cv::Mat Stable_graph::draw_stable_contour(){
 	for(int i = 0; i < Region_contour.size();i++){
 		drawContours(Drawing, Region_contour, i, i+1, -1, 8);
 	}
+	for(std::map<int, int >::iterator map_iter = map_old_tag_to_new.begin(); map_iter != map_old_tag_to_new.end(); map_iter ++){
+		cerr << "   Drawing: "<< map_iter->first <<" correspond to "<< map_iter->second << endl;
+	}
+
+	
+	
+	
 	cv::flip(Drawing,Drawing,0);/*
 	for(int i = 0; i < Region_centroid.size();i++){
 		stringstream mix;      mix<<i;				std::string text = mix.str();
@@ -100,6 +107,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 		if(is_stable_connected == false){
 			unconnected_contours.push_back(Stable.Region_contour[i]);
 			unconnected_centroids.push_back(Stable.Region_centroid[i]);
+			Stable.map_old_tag_to_new[unconnected_contours.size()-1]=i;
 //					cout << "Old contour " << i<<" is not connected  "<< endl;
 		}
 		else{
@@ -162,15 +170,19 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 
 // Paint differential contours
 	cout << "Paint differential contours "<<endl;
-	vector<vector<cv::Point> > joint_contours = unconnected_contours;
+	vector<vector<cv::Point> > joint_contours = unconnected_contours, new_contours;
 	vector<cv::Point> joint_centroids = unconnected_centroids;
 	
 	for(int i = 0; i < wrapper_vector.size();i++){
 		for(int j = 0; j < wrapper_vector[i].Decomposed_contours.size();j++){
-			joint_contours.push_back(wrapper_vector[i].Decomposed_contours[j]);
+//			joint_contours.push_back(wrapper_vector[i].Decomposed_contours[j]);
+			new_contours.push_back(wrapper_vector[i].Decomposed_contours[j]);
 			joint_centroids.push_back(wrapper_vector[i].contours_centroid[j]);
 		}
 	}	
+	cerr << "The new decomposition has  "<< new_contours.size() <<" contours and the old had "<< connected_contours.size() << endl;
+	joint_contours.insert(joint_contours.end(), new_contours.begin(), new_contours.end() );
+	
 	
 //		end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process multiple Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 

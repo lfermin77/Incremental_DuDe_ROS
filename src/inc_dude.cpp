@@ -55,6 +55,16 @@ class ROS_handler
 //			cv_ptr->encoding = "mono8";
 			cv_ptr->encoding = "bgr8";
 						
+			
+			cv::Vec3b black(208, 208, 208);
+			colormap.push_back(black);
+			for(int i=0;i<= 50; i++){
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				colormap.push_back(color);
+			}
+						
+						
+						
 		}
 
 
@@ -137,8 +147,9 @@ class ROS_handler
 //			grad = image_cleaned;	
 
 //			std::vector <cv::Vec3b> new_colormap;
-			if(colormap.size()==0){
-				colormap = convert_image_to_color( grad, &image2save_Inc);
+			if(colormap.size()>=0){
+//				colormap = convert_image_to_color( grad, &image2save_Inc);
+				image2save_Inc = paint_image_colormap(grad, colormap);
 			}
 			else{
 //				new_colormap = convert_image_to_color( grad, &image2save_Inc);
@@ -392,9 +403,8 @@ class ROS_handler
 /////////////////////////////////////
 //// Evaluation
 //////////////////////////////////
-		typedef std::map <std::vector<int>, std::vector <cv::Point> > match2points;
-		typedef std::map <int, std::vector <cv::Point> > tag2points;
-		typedef std::map <int, tag2points> tag2tagMapper;
+
+
 
 
 	/////////////////
@@ -491,111 +501,118 @@ class ROS_handler
 
 
 	/////////////////////
-		std::map<int,int> compare_images(cv::Mat GT_segmentation_in, cv::Mat DuDe_segmentation_in){
+		std::map<int,int> compare_images(cv::Mat previous_segmentation, cv::Mat new_segmentation){
 			
 			std::map<int,int> segmented2GT_tags;
 			
-			cv::Mat GT_segmentation   = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
-			cv::Mat DuDe_segmentation = cv::Mat::zeros(GT_segmentation_in.size(),CV_8UC1);
+			cv::Mat prev_segmentation   = cv::Mat::zeros(previous_segmentation.size(),CV_8UC1);
+			cv::Mat current_segmentation = cv::Mat::zeros(previous_segmentation.size(),CV_8UC1);
 			
-			GT_segmentation_in  .convertTo(GT_segmentation, CV_8UC1);
-			DuDe_segmentation_in.convertTo(DuDe_segmentation, CV_8UC1);			
-			tag2tagMapper gt_tag2mapper,DuDe_tag2mapper;
+			previous_segmentation  .convertTo(prev_segmentation, CV_8UC1);
+			new_segmentation.convertTo(current_segmentation, CV_8UC1);			
 			
-			match2points links2points;
-			tag2points GT_points, DuDe_points;
+			std::map <std::vector<int>, std::vector <cv::Point> > links2points;
+			std::map <int, std::vector <cv::Point> > prev_points, new_points;
 			
-			for(int x=0; x < GT_segmentation.size().width; x++){
-				for(int y=0; y < GT_segmentation.size().height; y++){
+			for(int x=0; x < prev_segmentation.size().width; x++){
+				for(int y=0; y < prev_segmentation.size().height; y++){
 					cv::Point current_pixel(x,y);
 					std::vector<int> match;
 										
-					int tag_GT   = GT_segmentation.at<uchar>(current_pixel);
-					int tag_DuDe  = DuDe_segmentation.at<uchar>(current_pixel);
+					int tag_prev   = prev_segmentation.at<uchar>(current_pixel);
+					int tag_new  = current_segmentation.at<uchar>(current_pixel);
 					
-					if(tag_DuDe>0 && tag_GT>0 ){
-						gt_tag2mapper  [tag_GT][tag_DuDe].push_back(current_pixel);
-						DuDe_tag2mapper[tag_DuDe][tag_GT].push_back(current_pixel);
-						match.push_back(tag_DuDe);
-						match.push_back(tag_GT);
+//					if( tag_new>0 && tag_prev>0){
+					if( tag_new>0){
+						match.push_back( tag_prev);
+						match.push_back( tag_new) ;
 						links2points[match].push_back(current_pixel);
-						GT_points[tag_GT].push_back(current_pixel);
-						DuDe_points[tag_DuDe].push_back(current_pixel);
+						
+						prev_points[tag_prev].push_back(current_pixel);
+						new_points[tag_new].push_back(current_pixel);
 						
 					}
 				}
 			}
-			/*
-			for(tag2points::iterator it = GT_points.begin(); it != GT_points.end(); it++)
-				std::cout << "GT "<<it->first<<", with size " <<it->second.size() << " size2  " << GT_points[it->first].size()  <<endl;
-			for(tag2points::iterator it = DuDe_points.begin(); it != DuDe_points.end(); it++)
-				std::cout << "DuDe "<<it->first<<", with size" <<it->second.size() << endl;
-			//*/
 
-			std::map <std::vector<int>, float > link2relation;
-			std::map<int,int> DuDe_Union_Match;
-			int current_DuDe_Tag=0;
-			int current_GT_max = -1;
-			int current_DuDe_evaluated = -1;
-			float current_GT_max_relation = -1;
 
-			for( match2points::iterator it = links2points.begin(); it!= links2points.end(); it++ ){
+
+			std::map <int, std::pair<int, float>  > map_current_to_max_and_relation;
+			int this_max = -1;
+			int current_new_evaluated = -1;
+			float this_max_relation = -1;
+			std::map <std::vector<int>, float > match_to_relation;
+			
+
+			for( std::map <std::vector<int>, std::vector <cv::Point> >::iterator it = links2points.begin(); it!= links2points.end(); it++ ){
 				std::vector <cv::Point> points_in_match = it->second;
-
-				float A = GT_points  [ it->first[1] ].size();
-				float B = DuDe_points[ it->first[0] ].size();
-				float AandB = points_in_match.size();
-				float relation = AandB/( A + B - AandB );
-
-				link2relation[it->first] = relation;
-//				std::cout << "["<<it->first[0]<<","<<it->first[1]<<"] has "<< relation << endl;
-//				std::cout << "  AandB "<<AandB<<", A "<< A <<", B "<< B << endl;
 				
-				if(current_DuDe_evaluated != it->first[0] ){//update maximum
-					DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;
-//					std::cout << "    Maximum is ["<< current_DuDe_evaluated <<","<< current_GT_max <<"] with relation "<< current_GT_max_relation << endl;
-					current_DuDe_evaluated = it->first[0];
-					current_GT_max = it->first[1];
-					current_GT_max_relation = relation;
-				}
-				else if(relation > current_GT_max_relation){
-					current_GT_max = it->first[1];
-					current_GT_max_relation = relation;
-				}				
-			}
-			DuDe_Union_Match[current_DuDe_evaluated] = current_GT_max;
-//			std::cout << "    Maximum is ["<< current_DuDe_evaluated <<","<< current_GT_max <<"] with relation "<< current_GT_max_relation << endl;				
-			/*
+				int previous = it->first[0];
+				int current  = it->first[1];
+
+				float A = prev_points  [ previous ].size();
+				float B = new_points[ current ].size();
+				float AandB = points_in_match.size();
+
+				float relation = AandB/B;  //( A + B - AandB );
+				
+				match_to_relation[it->first] = relation;
 
 
-			for( tag2tagMapper::iterator it = gt_tag2mapper.begin(); it!= gt_tag2mapper.end(); it++ ){
-				tag2points inside = it->second;
-				int max_intersection=0, total_points=0; 
-				int gt_tag_max = -1;
-				for( tag2points::iterator it2 = inside.begin(); it2!= inside.end(); it2++ ){
-					total_points += it2->second.size();
-					if (it2->second.size() > max_intersection){
-						max_intersection = it2->second.size();
-						gt_tag_max = it2->first;
+				std::cerr << "    ["<<previous<<","<<current<<"] has "<< relation << endl;
+//				std::cout << "  AandB "<<AandB<<", A "<< A <<", B "<< B << endl;
+
+				std::pair<int, float> values(previous, relation);				
+
+				std::map <int, std::pair<int, float>  >::iterator map_iter = map_current_to_max_and_relation.find(current);
+				if (map_iter != map_current_to_max_and_relation.end()){
+					std::cerr << "     old relation "<<  map_current_to_max_and_relation[current].second << ", new relation "<< relation << endl;				
+					if(map_current_to_max_and_relation[current].second < relation){
+						map_current_to_max_and_relation[current]= values;
+						std::cerr << "     max modified to "<<  map_current_to_max_and_relation[current].first << endl;				
 					}
 				}
-				segmented2GT_tags[gt_tag_max] = it->first;
-			}	
-					
-
-			for( tag2tagMapper::iterator it = DuDe_tag2mapper.begin(); it!= DuDe_tag2mapper.end(); it++ ){
-				tag2points inside = it->second;
-				int max_intersection=0, total_points=0; 
-				for( tag2points::iterator it2 = inside.begin(); it2!= inside.end(); it2++ ){
-					total_points += it2->second.size();
-					if (it2->second.size() > max_intersection) max_intersection = it2->second.size();
+				else{
+					map_current_to_max_and_relation[current]= values;
 				}
-			}			
+				//
 
 
-			//*/
-//			return(segmented2GT_tags);
-			return DuDe_Union_Match;
+
+				/*
+				if(current_new_evaluated != current ){//update maximum
+					if( current_new_evaluated != -1)
+						max_match_current[current_new_evaluated] = previous;
+
+//					std::cout << "    Maximum is ["<< current_new_evaluated <<","<< this_max <<"] with relation "<< this_max_relation << endl;
+					current_new_evaluated = current;
+					this_max = previous;
+					this_max_relation = relation;
+				}
+				else if(relation > this_max_relation){
+					this_max = previous;
+					this_max_relation = relation;
+				}				
+			}
+			max_match_current[current_new_evaluated] = this_max;
+			*/
+			
+			}
+			std::map<int,int>	max_match_current;		
+			for(std::map <int, std::pair<int, float>  >::iterator map_iter = map_current_to_max_and_relation.begin(); map_iter != map_current_to_max_and_relation.end(); map_iter++){
+				std::cerr << "     "<<map_iter->first <<" in new correspond to the old "<< map_iter->second.first <<" with relation " << map_iter->second.second<<  endl;				
+				max_match_current[map_iter->second.first] = map_iter->first;
+			}
+			
+			
+			
+			for(std::map<int,int>::iterator map_iter =   max_match_current.begin(); map_iter !=   max_match_current.end(); map_iter ++ ){
+				std::cerr << "     "<<map_iter->first <<" correspond to "<< map_iter->second << endl;				
+			}
+				std::cerr << endl << endl;	
+				
+
+			return max_match_current;
 		}
 
 
@@ -659,11 +676,24 @@ class ROS_handler
 				}
 			}
 			*image_out = image_float.clone();
+			colormap->clear();
+			*colormap = color_vector;
 
 
 
 		}
 
+
+	cv::Mat paint_image_colormap(cv::Mat image_in, std::vector <cv::Vec3b> color_vector){
+		cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
+		for(int i=0; i < image_in.rows; i++){
+			for(int j=0;j< image_in.cols; j++){
+				int color_index = image_in.at<uchar>(i,j);
+				image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+			}
+		}
+		return image_float;
+	}
 
 
 };

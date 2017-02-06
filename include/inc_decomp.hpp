@@ -14,6 +14,7 @@ class Stable_graph
 	std::vector<std::vector<cv::Point> > Region_contour;
 	std::vector<cv::Point> Region_centroid;
 	std::vector<std::set<int> > Region_connections;
+	std::map<int, int > map_old_tag_to_new;
 
 // Edges
 	std::vector<cv::Point> diagonal_centroid;
