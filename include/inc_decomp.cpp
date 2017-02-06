@@ -4,11 +4,13 @@
 
 cv::Mat Stable_graph::draw_stable_contour(){
 	cv::Mat Drawing = cv::Mat::zeros(image_size.height, image_size.width, CV_8UC1);	
+	std::list<int> a;
 	for(int i = 0; i < Region_contour.size();i++){
 		drawContours(Drawing, Region_contour, i, i+1, -1, 8);
 	}
 	for(std::map<int, int >::iterator map_iter = map_old_tag_to_new.begin(); map_iter != map_old_tag_to_new.end(); map_iter ++){
-		cerr << "   Drawing: "<< map_iter->first <<" correspond to "<< map_iter->second << endl;
+		if(map_iter->first != map_iter->second)
+			cerr << "   Drawing: "<< map_iter->first <<" correspond to "<< map_iter->second << endl;
 	}
 
 	
@@ -88,6 +90,8 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	vector<vector<cv::Point> > connected_contours, unconnected_contours;
 	std::vector<cv::Point> unconnected_centroids, connected_centroids;
 	vector< vector <int > > conection_prev_new;
+	Stable.map_old_tag_to_new.clear();
+	
 	for(int i=0;i < Stable.Region_contour.size();i++){
 		bool is_stable_connected = false;
 		for(int j=0;j < big_contours_vector.size();j++){
@@ -180,19 +184,60 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 			joint_centroids.push_back(wrapper_vector[i].contours_centroid[j]);
 		}
 	}	
-	cerr << "The new decomposition has  "<< new_contours.size() <<" contours and the old had "<< connected_contours.size() << endl;
+//	if(new_contours.size()>0)
+		cerr << "The new decomposition has  "<< new_contours.size() <<" contours and the old had "<< connected_contours.size() << endl;
 	joint_contours.insert(joint_contours.end(), new_contours.begin(), new_contours.end() );
 	
 	
 //		end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process multiple Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 
+//////////////////////////
+// Order Contours
+	vector<vector<cv::Point> > ordered_contours;
+	vector<cv::Point> ordered_centroids;
+	std::list<int> remaining_contours;
+	for(int i=0; i < joint_centroids.size();i++)
+		remaining_contours.push_back(i);
+	
+	for(int i=0; i <Stable.Region_contour.size();i++){
+		cv::Point current_centroid = Stable.Region_centroid[i];
+		float min_dist = std::numeric_limits<float>::infinity();
+		int min_index;
+//		for(int j=0;j < joint_centroids.size();j++){
+		for(std::list<int>::iterator list_iter = remaining_contours.begin(); list_iter != remaining_contours.end(); list_iter++){
+			float diff = cv::norm( joint_centroids[*list_iter] -Stable.Region_centroid[i]  );
+			if(diff < min_dist){
+				min_index=*list_iter;
+				min_dist = diff;
+			}
+		}
+		ordered_contours .push_back(joint_contours [min_index]);
+		ordered_centroids.push_back(joint_centroids[min_index]);
+		remaining_contours.remove(min_index);
+	}
+	if(remaining_contours.size()>0){
+		for(std::list<int>::iterator list_iter = remaining_contours.begin(); list_iter != remaining_contours.end(); list_iter++){
+			ordered_contours .push_back(joint_contours [*list_iter]);
+			ordered_centroids.push_back(joint_centroids[*list_iter]);
+		}
+	}
+	
+	
+
+	cerr << "The new decomposition has  "<< ordered_contours.size()  << endl;
+
+
 
 ///////////////////
 //// Build stable graph
 	begin_process = clock();
-
+/*
 	Stable.Region_contour  = joint_contours;
 	Stable.Region_centroid = joint_centroids;
+	*/
+	Stable.Region_contour  = ordered_contours;
+	Stable.Region_centroid = ordered_centroids;
+	
 	previous_rect = resize_rect;
 	
 	Stable.image_size = image_cleaned.size();
