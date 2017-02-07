@@ -8,10 +8,7 @@ cv::Mat Stable_graph::draw_stable_contour(){
 	for(int i = 0; i < Region_contour.size();i++){
 		drawContours(Drawing, Region_contour, i, i+1, -1, 8);
 	}
-	for(std::map<int, int >::iterator map_iter = map_old_tag_to_new.begin(); map_iter != map_old_tag_to_new.end(); map_iter ++){
-		if(map_iter->first != map_iter->second)
-			cerr << "   Drawing: "<< map_iter->first <<" correspond to "<< map_iter->second << endl;
-	}
+
 
 	
 	
@@ -185,47 +182,116 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 		}
 	}	
 //	if(new_contours.size()>0)
-		cerr << "The new decomposition has  "<< new_contours.size() <<" contours and the old had "<< connected_contours.size() << endl;
+		cerr << "The new differential decomposition has  "<< new_contours.size() <<" contours and the old had "<< connected_contours.size() << endl;
+
 	joint_contours.insert(joint_contours.end(), new_contours.begin(), new_contours.end() );
+		cerr << "The new decomposition has  "<< joint_contours.size() <<" contours and the old had "<< Stable.Region_contour.size() << endl;
 	
 	
 //		end_process=clock();   elapsed_secs_process = double(end_process - begin_process) / CLOCKS_PER_SEC;			std::cerr<<"Time elapsed in process multiple Decomp "<< elapsed_secs_process*1000 << " ms"<<std::endl<<std::endl;
 
 //////////////////////////
 // Order Contours
-	vector<vector<cv::Point> > ordered_contours;
-	vector<cv::Point> ordered_centroids;
+	std::map<int,vector<cv::Point> > mapped_contours;
+	std::map<int,cv::Point> mapped_centroids;
+
+	
+
 	std::list<int> remaining_contours;
+	
 	for(int i=0; i < joint_centroids.size();i++)
 		remaining_contours.push_back(i);
+
+
+		cerr << "remaining_contours FIRST TIME  "<< remaining_contours.size() << endl;
 	
 	for(int i=0; i <Stable.Region_contour.size();i++){
 		cv::Point current_centroid = Stable.Region_centroid[i];
 		float min_dist = std::numeric_limits<float>::infinity();
-		int min_index;
-//		for(int j=0;j < joint_centroids.size();j++){
+		int min_index=-1;
+
+		//*
+
+		cerr << "remaining_contours.size()  "<< remaining_contours.size() << endl;
+
+		double point_inside = -1;
+
 		for(std::list<int>::iterator list_iter = remaining_contours.begin(); list_iter != remaining_contours.end(); list_iter++){
-			float diff = cv::norm( joint_centroids[*list_iter] -Stable.Region_centroid[i]  );
+			point_inside = pointPolygonTest(joint_contours[*list_iter], current_centroid, false);
+			if(point_inside >0 ){
+				cerr << "Centroid of contour  "<< i << " is inside " <<  *list_iter << endl;
+				min_index=*list_iter;
+			}
+
+		}
+		if(min_index >= 0){
+			mapped_contours [i] = (joint_contours [min_index]);
+			mapped_centroids[i] = (joint_centroids[min_index]);
+			remaining_contours.remove(min_index);			
+
+			
+		}
+		else{
+				cerr << "PREVIOUS DISAPPEARED" << endl;
+		}
+		//*/
+
+
+		/*
+		for(std::list<int>::iterator list_iter = remaining_contours.begin(); list_iter != remaining_contours.end(); list_iter++){ //Ordering with centroid distances
+			float diff = cv::norm( joint_centroids[*list_iter] - current_centroid  );
 			if(diff < min_dist){
 				min_index=*list_iter;
 				min_dist = diff;
 			}
 		}
-		ordered_contours .push_back(joint_contours [min_index]);
-		ordered_centroids.push_back(joint_centroids[min_index]);
-		remaining_contours.remove(min_index);
+		if(min_index>=0){
+			ordered_contours .push_back(joint_contours [min_index]);
+			ordered_centroids.push_back(joint_centroids[min_index]);
+			remaining_contours.remove(min_index);
+		}
+		//*/
 	}
+	/*
 	if(remaining_contours.size()>0){
+		cerr << "Contours new  "<<   endl;
 		for(std::list<int>::iterator list_iter = remaining_contours.begin(); list_iter != remaining_contours.end(); list_iter++){
-			ordered_contours .push_back(joint_contours [*list_iter]);
-			ordered_centroids.push_back(joint_centroids[*list_iter]);
+				ordered_contours .push_back(joint_contours [*list_iter]);
+				ordered_centroids.push_back(joint_centroids[*list_iter]);
 		}
 	}
+	//*/
 	
+	vector<vector<cv::Point> > ordered_contours;
+	vector<cv::Point> ordered_centroids;
+	std::list<int>::iterator list_iter = remaining_contours.begin();
+
+	for(int i=0; i < joint_centroids.size();i++){
+		std::map<int,vector<cv::Point> >::iterator index_found = mapped_contours.find(i);
+		std::map<int,cv::Point>::iterator centroid_index = mapped_centroids.find(i);
+		
+		if(index_found != mapped_contours.end()){
+			ordered_contours.push_back(index_found->second);
+			ordered_centroids.push_back(centroid_index->second);
+
+		}
+		else{
+			ordered_contours .push_back(joint_contours [*list_iter]);
+			ordered_centroids.push_back(joint_centroids[*list_iter]);
+			list_iter++;
+		}
+		//
+	}
+		
+		
 	
 
-	cerr << "The new decomposition has  "<< ordered_contours.size()  << endl;
 
+	
+
+	cerr << "The new decomposition has  "<< mapped_contours.size()  << endl;
+	
+				cerr << endl << endl;
 
 
 ///////////////////
@@ -234,10 +300,11 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 /*
 	Stable.Region_contour  = joint_contours;
 	Stable.Region_centroid = joint_centroids;
-	*/
+	//*/
+	//*
 	Stable.Region_contour  = ordered_contours;
 	Stable.Region_centroid = ordered_centroids;
-	
+	//*/
 	previous_rect = resize_rect;
 	
 	Stable.image_size = image_cleaned.size();
