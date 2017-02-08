@@ -195,37 +195,65 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	std::map<int,vector<cv::Point> > mapped_contours;
 	std::map<int,cv::Point> mapped_centroids;
 	
-	std::vector<double> vec_with_size_of_new(joint_contours.size(),0);// New
-	std::vector<double> vec_with_size_of_old(Stable.Region_contour.size(),0);// Old
+	std::vector<int> vec_with_size_of_new(joint_contours.size(),0);// New
+	std::vector<int> vec_with_size_of_old(Stable.Region_contour.size(),0);// Old
 	
-	std::vector<std::vector<double> > merge_matrix(Stable.Region_contour.size()  ,  vec_with_size_of_new );// Old * New
-	std::vector<double> merge_acum( joint_contours.size() , 0);
+	std::vector<std::vector<int> > merge_matrix(Stable.Region_contour.size()  ,  vec_with_size_of_new );// Old * New
+	std::vector<int> merge_acum( joint_contours.size() , 0);
 	for(int i=0;i < Stable.Region_contour.size(); i++){
 		for(int j=0; j < joint_contours.size(); j++){
 			double point_inside = pointPolygonTest(joint_contours[j], Stable.Region_centroid[i] , false);
-			merge_matrix[i][j] = point_inside;
+			merge_matrix[i][j] = (point_inside>=0)? 1:0;
 			merge_acum[j]+= merge_matrix[i][j];			
 		}
 	}
 
-	std::vector<std::vector<double> > split_matrix(joint_contours.size()  ,  vec_with_size_of_old );// New * Old
-	std::vector<double> split_acum( Stable.Region_contour.size() , 0);			
+	std::vector<std::vector<int> > split_matrix(joint_contours.size()  ,  vec_with_size_of_old );// New * Old
+	std::vector<int> split_acum( Stable.Region_contour.size() , 0);			
 	for(int i=0;i < joint_contours.size(); i++){
 		for(int j=0; j < Stable.Region_contour.size(); j++){
 			double point_inside = pointPolygonTest(Stable.Region_contour[j], joint_centroids[i] , false);
-			split_matrix[i][j] = point_inside;
+			split_matrix[i][j] = (point_inside>=0)? 1:0;;
 			split_acum[j] +=  split_matrix[i][j];
 		}
 	}
+	
 	std::cerr << "Merge Acum: ";
 	for (int i=0; i < merge_acum.size(); i++)
 		std::cerr << " "<< merge_acum[i];
 	std::cerr << std::endl;
+	
+
+	for (int j=0; j < joint_contours.size(); j++){
+		if(merge_acum[j] >1){
+			std::cerr << " Region "<< j<< " comes from (possible) the merge (";			
+			for (int i=0; i < Stable.Region_contour.size(); i++){		
+				if(merge_matrix[i][j]>0)	
+					std::cerr <<" "<< i;
+			}
+			std::cerr << ")"<<std::endl;
+		}
+	}
+
+
 
 	std::cerr << "Split Acum: ";
 	for (int i=0; i < split_acum.size(); i++)
 		std::cerr << " "<< split_acum[i];
 	std::cerr << std::endl;
+
+	for (int j=0; j < Stable.Region_contour.size(); j++){
+		if(split_acum[j] >1){
+			std::cerr << " Regions (";			
+			for (int i=0; i < joint_contours.size(); i++){		
+				if(split_matrix[i][j]>0)	
+					std::cerr <<" "<< i;
+			}
+			std::cerr<< ") comes from the (possible) split of region "<< j <<std::endl;
+		}
+	}
+
+
 
 
 
