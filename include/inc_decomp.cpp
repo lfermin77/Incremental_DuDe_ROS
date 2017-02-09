@@ -6,7 +6,7 @@ cv::Mat Stable_graph::draw_stable_contour(){
 	cv::Mat Drawing = cv::Mat::zeros(image_size.height, image_size.width, CV_8UC1);	
 	std::list<int> a;
 	for(int i = 0; i < Region_contour.size();i++){
-		drawContours(Drawing, Region_contour, i, i+1, -1, 8);
+		drawContours(Drawing, Region_contour, i, index_to_color[i], -1, 8);
 	}
 
 
@@ -22,8 +22,9 @@ cv::Mat Stable_graph::draw_stable_contour(){
 	return Drawing;
 }
 
-
-
+Stable_graph::Stable_graph(){
+	max_color=0;
+}
 
 Incremental_Decomposer::Incremental_Decomposer(){
 	Decomp_threshold_ = 2.5;
@@ -87,7 +88,8 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	vector<vector<cv::Point> > connected_contours, unconnected_contours;
 	std::vector<cv::Point> unconnected_centroids, connected_centroids;
 	vector< vector <int > > conection_prev_new;
-	Stable.map_old_tag_to_new.clear();
+
+//	Stable.index_to_color.clear();
 	
 	for(int i=0;i < Stable.Region_contour.size();i++){
 		bool is_stable_connected = false;
@@ -108,7 +110,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 		if(is_stable_connected == false){
 			unconnected_contours.push_back(Stable.Region_contour[i]);
 			unconnected_centroids.push_back(Stable.Region_centroid[i]);
-			Stable.map_old_tag_to_new[unconnected_contours.size()-1]=i;
+//			Stable.index_to_color[unconnected_contours.size()-1]=i;
 //					cout << "Old contour " << i<<" is not connected  "<< endl;
 		}
 		else{
@@ -199,22 +201,32 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	std::vector<int> vec_with_size_of_old(Stable.Region_contour.size(),0);// Old
 	
 	std::vector<std::vector<int> > merge_matrix(Stable.Region_contour.size()  ,  vec_with_size_of_new );// Old * New
+	std::vector<std::vector<int> > trans_split_matrix(Stable.Region_contour.size()  ,  vec_with_size_of_new );
 	std::vector<int> merge_acum( joint_contours.size() , 0);
 	
-	std::vector<std::vector<int> > split_matrix(joint_contours.size()  ,  vec_with_size_of_old );// New * Old
+//	std::vector<std::vector<int> > split_matrix(joint_contours.size()  ,  vec_with_size_of_old );// New * Old
 	std::vector<int> split_acum( Stable.Region_contour.size() , 0);			
-	
+
+	std::vector< std::pair<int,int> > pivots;
+	std::map<int,int> new_tag_to_old_color;
+		
 	for(int i=0;i < Stable.Region_contour.size(); i++){
 		for(int j=0; j < joint_contours.size(); j++){
 			double point_inside = pointPolygonTest(joint_contours[j], Stable.Region_centroid[i] , false);
-			merge_matrix[i][j] = (point_inside>=0)? 1:0;
-			merge_acum[j]+= merge_matrix[i][j];		
+			merge_matrix[i][j] = (point_inside>=0)? 1 : 0;
+			merge_acum[j]+= merge_matrix[i][j];					
+
+			point_inside = pointPolygonTest(Stable.Region_contour[i], joint_centroids[j] , false);			
+			trans_split_matrix[i][j] = (point_inside>=0)? 1 : 0;
+			split_acum[i] +=  trans_split_matrix[i][j];				
 			
-			//*
-			point_inside = pointPolygonTest(Stable.Region_contour[i], joint_centroids[j] , false);
-			split_matrix[j][i] = (point_inside>=0)? 1:0;
-			split_acum[i] +=  split_matrix[j][i];	
-			//*/
+			if(  (merge_matrix[i][j] ==1) && (trans_split_matrix[i][j]) ){
+				std::pair<int,int> correspondence(i,j);
+				pivots.push_back(correspondence);
+				new_tag_to_old_color[j] = Stable.index_to_color[i];
+				
+			}
+			//			
 		}
 	}
 	
@@ -228,6 +240,16 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 		}
 	}
 	//*/
+	
+	/*
+	// find max color
+	int max_color=0;
+	for(std::map<int, int >::iterator map_iter = Stable.index_to_color.begin(); map_iter != Stable.index_to_color.end(); map_iter ++ ){
+		max_color = (map_iter->second > max_color)? map_iter->second : max_color;
+	}
+	//*/
+	std::cerr << "Max color was: "<< Stable.max_color << std::endl;
+	
 	std::cerr << "Merge Acum: ";
 	for (int i=0; i < merge_acum.size(); i++)
 		std::cerr << " "<< merge_acum[i];
@@ -243,6 +265,13 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 			}
 			std::cerr << ")"<<std::endl;
 		}
+		if(merge_acum[j] == 0){
+			std::cerr << " Region "<< j<< " is created"<<std::endl;
+			Stable.max_color ++;
+//			max_color++;
+			new_tag_to_old_color[j]=Stable.max_color;
+//			new_tag_to_old_color[j]=max_color;
+		}
 	}
 
 
@@ -252,18 +281,25 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 		std::cerr << " "<< split_acum[i];
 	std::cerr << std::endl;
 
+
 	for (int j=0; j < Stable.Region_contour.size(); j++){
 		if(split_acum[j] >1){
 			std::cerr << " Regions (";			
 			for (int i=0; i < joint_contours.size(); i++){		
-				if(split_matrix[i][j]>0)	
-					std::cerr <<" "<< i;
+				if(trans_split_matrix[j][i]>0)	
+					std::cerr <<" "<< j;
 			}
 			std::cerr<< ") comes from the (possible) split of region "<< j <<std::endl;
 		}
+		if(split_acum[j] ==0){
+			std::cerr << " Regions "<< j <<  " is destroyed"<< std::endl;
+		}
 	}
 
-
+	std::cerr << "Pivots: ";
+	for (int i=0; i < pivots.size(); i++)
+		std::cerr << "("<< pivots[i].first << ","<<pivots[i].second<<") ";
+	std::cerr << std::endl;
 
 
 
@@ -370,11 +406,19 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 ///////////////////
 //// Build stable graph
 	begin_process = clock();
-/*
+	/*
+	Stable.index_to_color.clear();
+	for (int i=0; i < joint_contours.size(); i++)
+		Stable.index_to_color[i]=i+1;
+	//*/
+	std::cerr << "New Max color is: "<< Stable.max_color << std::endl;
+	
+	Stable.index_to_color = new_tag_to_old_color;
+//*
 	Stable.Region_contour  = joint_contours;
 	Stable.Region_centroid = joint_centroids;
 	//*/
-	//*
+	/*
 	Stable.Region_contour  = ordered_contours;
 	Stable.Region_centroid = ordered_centroids;
 	//*/

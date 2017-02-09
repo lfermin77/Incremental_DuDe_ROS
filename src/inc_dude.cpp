@@ -58,7 +58,7 @@ class ROS_handler
 			
 			cv::Vec3b black(208, 208, 208);
 			colormap.push_back(black);
-			for(int i=0;i<= 50; i++){
+			for(int i=0;i<= 500; i++){
 				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
 				colormap.push_back(color);
 			}

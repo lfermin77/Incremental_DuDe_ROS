@@ -14,7 +14,8 @@ class Stable_graph
 	std::vector<std::vector<cv::Point> > Region_contour;
 	std::vector<cv::Point> Region_centroid;
 	std::vector<std::set<int> > Region_connections;
-	std::map<int, int > map_old_tag_to_new;
+	std::map<int, int > index_to_color;
+	int max_color;
 
 // Edges
 	std::vector<cv::Point> diagonal_centroid;
@@ -22,7 +23,7 @@ class Stable_graph
 	
 	cv::Size image_size;
 	
-	
+	Stable_graph();
 	cv::Mat draw_stable_contour();
 	
 };
