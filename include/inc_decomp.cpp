@@ -200,24 +200,34 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	
 	std::vector<std::vector<int> > merge_matrix(Stable.Region_contour.size()  ,  vec_with_size_of_new );// Old * New
 	std::vector<int> merge_acum( joint_contours.size() , 0);
+	
+	std::vector<std::vector<int> > split_matrix(joint_contours.size()  ,  vec_with_size_of_old );// New * Old
+	std::vector<int> split_acum( Stable.Region_contour.size() , 0);			
+	
 	for(int i=0;i < Stable.Region_contour.size(); i++){
 		for(int j=0; j < joint_contours.size(); j++){
 			double point_inside = pointPolygonTest(joint_contours[j], Stable.Region_centroid[i] , false);
 			merge_matrix[i][j] = (point_inside>=0)? 1:0;
-			merge_acum[j]+= merge_matrix[i][j];			
-		}
-	}
-
-	std::vector<std::vector<int> > split_matrix(joint_contours.size()  ,  vec_with_size_of_old );// New * Old
-	std::vector<int> split_acum( Stable.Region_contour.size() , 0);			
-	for(int i=0;i < joint_contours.size(); i++){
-		for(int j=0; j < Stable.Region_contour.size(); j++){
-			double point_inside = pointPolygonTest(Stable.Region_contour[j], joint_centroids[i] , false);
-			split_matrix[i][j] = (point_inside>=0)? 1:0;;
-			split_acum[j] +=  split_matrix[i][j];
+			merge_acum[j]+= merge_matrix[i][j];		
+			
+			//*
+			point_inside = pointPolygonTest(Stable.Region_contour[i], joint_centroids[j] , false);
+			split_matrix[j][i] = (point_inside>=0)? 1:0;
+			split_acum[i] +=  split_matrix[j][i];	
+			//*/
 		}
 	}
 	
+	/*
+
+	for(int i=0;i < joint_contours.size(); i++){
+		for(int j=0; j < Stable.Region_contour.size(); j++){
+			double point_inside = pointPolygonTest(Stable.Region_contour[j], joint_centroids[i] , false);
+			split_matrix[i][j] = (point_inside>=0)? 1:0;
+			split_acum[j] +=  split_matrix[i][j];
+		}
+	}
+	//*/
 	std::cerr << "Merge Acum: ";
 	for (int i=0; i < merge_acum.size(); i++)
 		std::cerr << " "<< merge_acum[i];
