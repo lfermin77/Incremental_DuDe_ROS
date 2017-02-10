@@ -287,7 +287,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 			std::cerr << " Regions (";			
 			for (int i=0; i < joint_contours.size(); i++){		
 				if(trans_split_matrix[j][i]>0)	
-					std::cerr <<" "<< j;
+					std::cerr <<" "<< i;
 			}
 			std::cerr<< ") comes from the (possible) split of region "<< j <<std::endl;
 		}
@@ -302,10 +302,22 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	std::cerr << std::endl;
 
 
+	if(new_tag_to_old_color.size() !=  joint_centroids.size()){
+		for(int i=0; i < joint_centroids.size(); i++){
+			std::map<int, int >::iterator index_found =  new_tag_to_old_color.find(i);
+			if(index_found == new_tag_to_old_color.end()){
+				Stable.max_color ++;
+				new_tag_to_old_color[i]=Stable.max_color;
+			}
+			//	
+		}
+		//
+	}
+
 
 
 	
-
+/*
 	std::list<int> remaining_contours;
 	
 	for(int i=0; i < joint_centroids.size();i++)
@@ -360,7 +372,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 			remaining_contours.remove(min_index);
 		}
 		//*/
-	}
+	//}
 	/*
 	if(remaining_contours.size()>0){
 		cerr << "Contours new  "<<   endl;
@@ -370,7 +382,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 		}
 	}
 	//*/
-	
+	/*
 	vector<vector<cv::Point> > ordered_contours;
 	vector<cv::Point> ordered_centroids;
 	std::list<int>::iterator list_iter = remaining_contours.begin();
@@ -389,7 +401,8 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 			ordered_centroids.push_back(joint_centroids[*list_iter]);
 			list_iter++;
 		}
-		//
+
+		
 	}
 		
 		
@@ -401,6 +414,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	cerr << "The new decomposition has  "<< mapped_contours.size()  << endl;
 	
 				cerr << endl << endl;
+				//*/
 
 
 ///////////////////
