@@ -155,8 +155,10 @@ class ROS_handler
 //				new_colormap = convert_image_to_color( grad, &image2save_Inc);
 				std::map<int,int> original_map = compare_images(previous_image, grad );
 				paint_with_previous_color( grad, &colormap,  original_map, &image2save_Inc);
+				
+
 			}
-			
+//									std::cerr<<"Stable.Region_centroid.size()  outside"<<Stable.Region_centroid.size()<<std::endl;
 			
 			previous_image = grad.clone();
 
@@ -646,45 +648,28 @@ class ROS_handler
 
 	////////////////
 	void paint_with_previous_color( cv::Mat image_in, std::vector <cv::Vec3b> *colormap, std::map<int,int> original_map, cv::Mat *image_out){
-			double min, max;
-			std::vector <cv::Vec3b> color_vector;
-			cv::Vec3b black(208, 208, 208);
-			color_vector.push_back(black);
-			
-			std::map<int,int>::iterator map_iter;
-			
-			cv::minMaxLoc(image_in, &min,&max);
-			color_vector.resize(max);
+		double min, max;
+		std::vector <cv::Vec3b> color_vector;
+		cv::Vec3b black(208, 208, 208);
+		color_vector.push_back(black);
+		
+		std::map<int,int>::iterator map_iter;
+		
+		cv::minMaxLoc(image_in, &min,&max);
+		color_vector.resize(max);
 
-			for(int i=1;i<= max; i++){
-				map_iter = original_map.find(i);
-				if (map_iter != original_map.end()){
-					int index_in_original = map_iter->second;
-					color_vector[i]=(*colormap)[index_in_original];
-				}
-				else{		
-					cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
-					color_vector[i] = color;
-				}
+		for(int i=1;i<= max; i++){
+			map_iter = original_map.find(i);
+			if (map_iter != original_map.end()){
+				int index_in_original = map_iter->second;
+				color_vector[i]=(*colormap)[index_in_original];
 			}
-			/////
-			cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
-			for(int i=0; i < image_in.rows; i++){
-				for(int j=0;j< image_in.cols; j++){
-					int color_index = image_in.at<uchar>(i,j);
-					image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
-				}
+			else{		
+				cv::Vec3b color(rand() % 255,rand() % 255,rand() % 255);
+				color_vector[i] = color;
 			}
-			*image_out = image_float.clone();
-			colormap->clear();
-			*colormap = color_vector;
-
-
-
 		}
-
-
-	cv::Mat paint_image_colormap(cv::Mat image_in, std::vector <cv::Vec3b> color_vector){
+		/////
 		cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
 		for(int i=0; i < image_in.rows; i++){
 			for(int j=0;j< image_in.cols; j++){
@@ -692,6 +677,73 @@ class ROS_handler
 				image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
 			}
 		}
+
+
+		*image_out = image_float.clone();
+		colormap->clear();
+		*colormap = color_vector;
+
+
+	}
+
+
+	cv::Mat paint_image_colormap(cv::Mat image_in, std::vector <cv::Vec3b> color_vector){
+
+
+
+		cv::Mat image_float = cv::Mat::zeros(image_in.size(), CV_8UC3);
+
+
+
+		for(int i=0; i < image_in.rows; i++){
+			for(int j=0;j< image_in.cols; j++){
+				int color_index = image_in.at<uchar>(i,j);
+				image_float.at<cv::Vec3b>(i,j) = color_vector[color_index];
+			}
+		}
+		
+
+		cv::flip(image_float,image_float,0);
+		
+//		std::cerr<<"Stable.Region_centroid.size()"<<Stable.Region_centroid.size()<<std::endl;
+
+		std::cerr << "Current edges " << Stable.diagonal_connections.size() << std::endl;
+		
+		//*
+		for(int i=0;i < Stable.diagonal_centroid.size();i++){
+			int region_from =*(Stable.diagonal_connections[i].begin() );
+			int region_to =*(Stable.diagonal_connections[i].rbegin() );
+			
+			cv::Point Start_link = Stable.Region_centroid[region_from];
+			cv::Point End_link = Stable.Region_centroid[region_to];
+
+			std::cerr << "    from "<<region_from << ", to " << region_to << std::endl;
+			
+			cv::line( image_float, Start_link, Stable.diagonal_centroid[i], cv::Scalar( 0, 255, 0 ), 3, 8);
+			cv::line( image_float, Stable.diagonal_centroid[i], End_link, cv::Scalar( 0, 255, 0 ), 3, 8);
+			
+		}
+		//*/
+
+
+
+
+		for(int i = 0; i < Stable.Region_centroid.size();i++){
+			cv::Point flip_centroid;
+			flip_centroid.x = Stable.Region_centroid[i].x;
+			flip_centroid.y = Stable.image_size.height - Stable.Region_centroid[i].y;
+			
+//			circle( image_float,flip_centroid,5,cv::Scalar(0, 255, 0),-1,8);
+			circle( image_float,Stable.Region_centroid[i],6,cv::Scalar(0, 255, 0),-1,8);
+			circle( image_float,Stable.Region_centroid[i],3,cv::Scalar(0, 0, 255),-1,8);
+		 }
+		
+		
+		
+		
+		
+		cv::flip(image_float,image_float,0);
+		
 		return image_float;
 	}
 

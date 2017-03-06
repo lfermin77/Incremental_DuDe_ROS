@@ -14,14 +14,20 @@ class Stable_graph
 	std::vector<std::vector<cv::Point> > Region_contour;
 	std::vector<cv::Point> Region_centroid;
 	std::vector<std::set<int> > Region_connections;
-	std::map<int, int > index_to_color;
-	int max_color;
 
 // Edges
 	std::vector<cv::Point> diagonal_centroid;
 	std::vector<std::set<int> > diagonal_connections;
 	
+// Frontiers
+	std::vector<cv::Point> center_of_frontier;
+	std::vector<int > region_frontier;	
+	
 	cv::Size image_size;
+	std::map<int, int > index_to_color;
+	int max_color;
+
+
 	
 	Stable_graph();
 	cv::Mat draw_stable_contour();
@@ -64,5 +70,7 @@ class Incremental_Decomposer{
 		cv::Point pixel_to_cartesian(cv::Point point_in);
 		
 		cv::Point cartesian_to_pixel(cv::Point point_in);		
+		
+		void frontiers_in_map(cv::Mat  Tag_image, cv::Mat  original_image);
 };
 
