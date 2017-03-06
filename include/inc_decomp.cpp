@@ -228,24 +228,8 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 		}
 	}
 	
-	/*
 
-	for(int i=0;i < joint_contours.size(); i++){
-		for(int j=0; j < Stable.Region_contour.size(); j++){
-			double point_inside = pointPolygonTest(Stable.Region_contour[j], joint_centroids[i] , false);
-			split_matrix[i][j] = (point_inside>=0)? 1:0;
-			split_acum[j] +=  split_matrix[i][j];
-		}
-	}
-	//*/
-	
-	/*
-	// find max color
-	int max_color=0;
-	for(std::map<int, int >::iterator map_iter = Stable.index_to_color.begin(); map_iter != Stable.index_to_color.end(); map_iter ++ ){
-		max_color = (map_iter->second > max_color)? map_iter->second : max_color;
-	}
-	//*/
+
 	std::cerr << "Max color was: "<< Stable.max_color << std::endl;
 	
 	std::cerr << "Merge Acum: ";
@@ -450,6 +434,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 
 						cerr << "Old contour " << i<<" connected to new "<< j << endl;
 			}
+//			frontiers_in_map();
 			
 		}
 	}	
@@ -549,8 +534,8 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 	
 	int window_size=1;
 	
-	//*
-
+	std::map < std::set<int> , std::vector<cv::Point>   > points_in_edge, frontier_points;
+	std::map < int , std::vector<cv::Point>   > region_contour;
 	
 	for (int i=window_size;i < Tag_image.size().width- window_size ;i++){
 		for (int j=window_size;j < Tag_image.size().height - window_size ;j++){
@@ -576,84 +561,64 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 
 				}
 			}
-			 //*
+			 
 			//////////////////////////////
 			if (connections_in_region.size()==2 || (frontier_connections.size()==2 &&  ( (*frontier_connections.begin())==-1) ) ){
-//				mapping_region_to_point_array[center_tag-1].push_back(window_center);
+				region_contour[center_tag-1].push_back(window_center);
 			}
 
 			//////////////////
 			if(connections_in_region.size()==2){					
-//				mapping_set_to_point_array[connections_in_region].push_back(window_center);
+				points_in_edge[connections_in_region].push_back(window_center);
 				
 			}
 			if(frontier_connections.size()==2 &&  ( (*frontier_connections.begin())==-1) ){					
-//				mapping_frontier_to_point_array[frontier_connections].push_back(window_center);
-	//					Frontier_image.at<uchar>( window_center ) = 255;
+				frontier_points[frontier_connections].push_back(window_center);
 			}
-			//*/
+			
 		}
 	}
-	//////////////	
-	
-	// std::cout << "      Image processed "<< std::endl;
-	/*
-	for (region_points_mapper::iterator it2 = mapping_region_to_point_array.begin(); it2 != mapping_region_to_point_array.end(); it2 ++){
-		int region_tag = (*it2).first;		
-		RegionNodeMapper::iterator Region_iter = Region_Nodes_Map.find(region_tag);			
-		if(Region_iter == Region_Nodes_Map.end() ){// not found
-			Region_Node* current_region = new Region_Node;
-			current_region->id = region_tag;
-			Region_Nodes_Map[region_tag] = current_region;				
-		}				
-		Region_Nodes_Map[region_tag]->contour = (*it2).second;		
-	}
-	//	std::cout << "      Contour Extracted "<< std::endl;
-		
-
-
-	for (edge_points_mapper::iterator it2 = mapping_set_to_point_array.begin(); it2 != mapping_set_to_point_array.end(); it2 ++){
-		if(it2->second.size() > 10){ //Avoids sparse connections
-			Region_Edge *InsideEdge;
-			InsideEdge = new Region_Edge;
-			
-			InsideEdge->frontier = it2->second;
-			std::set<int> conection =it2->first;
-			InsideEdge->First_Region  = Region_Nodes_Map[ (*conection.begin()) ];
-			InsideEdge->Second_Region = Region_Nodes_Map[ (*conection.rbegin()) ];
-			InsideEdge->Nodes_ids = conection;
-			
-			Region_Nodes_Map[ (*conection.begin()) ]->connected.push_back(InsideEdge);
-			Region_Nodes_Map[ (*conection.rbegin()) ]->connected.push_back(InsideEdge);
-			
-			Region_Edges_Map[conection] =InsideEdge;
-		}
-				
-	}
-	// std::cout << "      Edge Extracted "<< std::endl;
-
-	for (edge_points_mapper::iterator it2 = mapping_frontier_to_point_array.begin(); it2 != mapping_frontier_to_point_array.end(); it2 ++){
-		if(it2->second.size() > 0){
-			Region_Edge *InsideEdge;
-			InsideEdge = new Region_Edge;
-			
-			InsideEdge->frontier = it2->second;
-			std::set<int> conection =it2->first;
-			InsideEdge->First_Region  = Region_Nodes_Map[ (*conection.begin()) ];
-			InsideEdge->Second_Region = Region_Nodes_Map[ (*conection.rbegin()) ];
-			InsideEdge->Nodes_ids = conection;
-			
-			Region_Nodes_Map[ (*conection.begin()) ]->connected.push_back(InsideEdge);
-			Region_Nodes_Map[ (*conection.rbegin()) ]->connected.push_back(InsideEdge);
-			
-			Region_Edges_Map[conection] =InsideEdge;	
-		}
-	}
-	// std::cout << "      Frontier Extracted "<< std::endl;
-
-*/
+	//
+	std::cerr << "points_in_edge "<< points_in_edge.size() << std::endl;
+	std::cerr << "frontier_points "<< frontier_points.size() << std::endl;
+	std::cerr << "region_contour "<< region_contour.size() << std::endl;
 
 }
+
+
+
+std::vector < std::vector<cv::Point> > Incremental_Decomposer::decompose_edge(	 std::vector<cv::Point>   points_in_edge){
+	std::vector < std::vector<cv::Point> > contours_divided;
+	
+	cv::Rect rectangle = boundingRect(points_in_edge);
+	
+	
+	
+	
+	return contours_divided;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

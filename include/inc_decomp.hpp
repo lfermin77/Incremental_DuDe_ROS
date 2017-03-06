@@ -72,5 +72,7 @@ class Incremental_Decomposer{
 		cv::Point cartesian_to_pixel(cv::Point point_in);		
 		
 		void frontiers_in_map(cv::Mat  Tag_image, cv::Mat  original_image);
+		
+		std::vector < std::vector<cv::Point> > decompose_edge(	 std::vector<cv::Point>   points_in_edge);		
 };
 
