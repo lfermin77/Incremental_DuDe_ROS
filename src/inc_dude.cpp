@@ -128,6 +128,11 @@ class ROS_handler
 
 			
 			end_process = getTime();	decompose_time = end_process - begin_process;
+
+
+
+
+
 			
 		////////////Draw Image & publish
 		
@@ -144,6 +149,10 @@ class ROS_handler
 			cv::flip(black_image, black_image,0);
 			image2save_black = black_image.clone();
 			grad = Stable.draw_stable_contour() & ~black_image;	
+
+			inc_decomp.frontiers_in_map(grad, received_image);
+
+
 //			grad = image_cleaned;	
 
 //			std::vector <cv::Vec3b> new_colormap;
