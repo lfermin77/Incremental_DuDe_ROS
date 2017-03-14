@@ -472,11 +472,40 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 	}
 	//
 	std::cerr << "points_in_edge "<< points_in_edge.size() << std::endl;
+
+	Stable.diagonal_connections.clear();
+	Stable.diagonal_centroid.clear();
+
+	for(std::map < std::set<int> , std::vector<cv::Point>   > ::iterator map_iter =points_in_edge.begin(); map_iter !=points_in_edge.end(); map_iter ++){
+		std::set<int> current_edge = map_iter->first;
+		cv::Point centroid_acum(0,0);
+		std::vector<cv::Point> current_contour = map_iter->second;
+		for (int i=0; i <current_contour.size();i++){
+			centroid_acum += current_contour[i];
+		}
+		centroid_acum.x= centroid_acum.x/current_contour.size();
+		centroid_acum.y= centroid_acum.y/current_contour.size();
+		
+		Stable.diagonal_connections.push_back(current_edge);
+		Stable.diagonal_centroid.push_back(centroid_acum);
+		
+	}
+
+
 	std::cerr << "frontier_points "<< frontier_points.size() << std::endl;
 	std::cerr << "region_contour "<< region_contour.size() << std::endl;
 
 }
 
+cv::Point contour_centroid(std::map < std::set<int> , std::vector<cv::Point>   >  input_map){
+	cv::Point centroid(0,0);
+	
+//	for(std::map < std::set<int> , std::vector<cv::Point>   > ::iterator map_iter =input_map.begin(); map_iter !=input_map.end(); map_iter ++){
+		
+
+
+	return centroid;
+}
 
 
 std::vector < std::vector<cv::Point> > Incremental_Decomposer::decompose_edge(	 std::vector<cv::Point>   points_in_edge){

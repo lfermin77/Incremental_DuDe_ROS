@@ -73,6 +73,7 @@ class Incremental_Decomposer{
 		
 		void frontiers_in_map(cv::Mat  Tag_image, cv::Mat  original_image);
 		
+		cv::Point contour_centroid(std::map < std::set<int> , std::vector<cv::Point>   >  input_map);
 		std::vector < std::vector<cv::Point> > decompose_edge(	 std::vector<cv::Point>   points_in_edge);		
 };
 
