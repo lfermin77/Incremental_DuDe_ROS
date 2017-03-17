@@ -428,6 +428,9 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 	
 	std::map < std::set<int> , std::vector<cv::Point>   > points_in_edge, frontier_points;
 	std::map < int , std::vector<cv::Point>   > region_contour;
+	std::map < int , std::set<int>   > connections;
+	
+	
 	
 	for (int i=window_size;i < Tag_image.size().width- window_size ;i++){
 		for (int j=window_size;j < Tag_image.size().height - window_size ;j++){
@@ -489,11 +492,47 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 		Stable.diagonal_connections.push_back(current_edge);
 		Stable.diagonal_centroid.push_back(centroid_acum);
 		
+		connections[ *(current_edge.begin())].insert(*(current_edge.rbegin()) );
+		connections[ *(current_edge.rbegin())].insert(*(current_edge.begin()) );
+		
 	}
 
 
+	Stable.region_frontier.clear();
+	Stable.center_of_frontier.clear();
+
 	std::cerr << "frontier_points "<< frontier_points.size() << std::endl;
+	//*
+	for(std::map < std::set<int> , std::vector<cv::Point>   > ::iterator map_iter =frontier_points.begin(); map_iter !=frontier_points.end(); map_iter ++){
+		std::set<int> current_edge = map_iter->first;
+		int current_frontier =*(current_edge.rbegin());
+
+		
+		cv::Point centroid_acum(0,0);
+		std::vector<cv::Point> current_contour = map_iter->second;
+		if(current_contour.size() > 5 && current_frontier <= Stable.Region_contour.size() ){
+			for (int i=0; i <current_contour.size();i++){
+				centroid_acum += current_contour[i];
+			}
+			centroid_acum.x= centroid_acum.x/current_contour.size();
+			centroid_acum.y= centroid_acum.y/current_contour.size();
+			
+			Stable.region_frontier.push_back(current_frontier);
+			Stable.center_of_frontier.push_back(centroid_acum);
+		}
+		
+	}
+
+
+
+	
+	//*/
+	
+
 	std::cerr << "region_contour "<< region_contour.size() << std::endl;
+
+//*/
+
 
 }
 
@@ -508,21 +547,33 @@ cv::Point contour_centroid(std::map < std::set<int> , std::vector<cv::Point>   >
 }
 
 
-std::vector < std::vector<cv::Point> > Incremental_Decomposer::decompose_edge(	 std::vector<cv::Point>   points_in_edge){
-	std::vector < std::vector<cv::Point> > contours_divided;
-	
-	cv::Rect rectangle = boundingRect(points_in_edge);
-	
-	
-	
-	
-	return contours_divided;
+
+
+
+
+std::vector < std::vector<cv::Point> > Incremental_Decomposer::decompose_edge(     std::vector<cv::Point>   points_in_edge){
+    std::vector < std::vector<cv::Point> > contours_divided;
+   
+    cv::Rect rectangle = boundingRect(points_in_edge);
+    // paint image
+    cv::Mat rastered_image = cv::Mat::zeros(rectangle.size(), CV_8UC1);
+   
+    for(int i=0; i < points_in_edge.size();i++){
+        rastered_image.at<uchar>(points_in_edge[i] - rectangle.tl() )=255;
+    }
+    cv::dilate(rastered_image, rastered_image, cv::Mat(), cv::Point(-1,-1), 1, cv::BORDER_CONSTANT, cv::morphologyDefaultBorderValue() );           
+   
+    cv::findContours(rastered_image, contours_divided, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE );
+   
+    for(int i=0; i < contours_divided.size(); i++){
+        for(int j=0; j <contours_divided[i].size(); j++){
+            contours_divided[i][j] += rectangle.tl() ;
+        }
+    }
+   
+   
+    return contours_divided;
 }
-
-
-
-
-
 
 
 

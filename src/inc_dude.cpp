@@ -733,6 +733,24 @@ class ROS_handler
 			
 		}
 		//*/
+		std::cerr << "Current frontier " << Stable.region_frontier.size() << std::endl;
+		
+		for(int i=0;i < Stable.region_frontier.size();i++){
+			int region = Stable.region_frontier[i];
+			
+			cv::Point Start_link = Stable.Region_centroid[region];
+			cv::Point End_link = Stable.center_of_frontier[i];
+
+			std::cerr << "    from "<<region << std::endl;
+			std::cerr << "    Start_link "<<Start_link << std::endl;
+			std::cerr << "    End_link "<<End_link << std::endl;
+			
+			cv::line( image_float, Start_link, End_link, cv::Scalar( 0, 0, 255 ), 3, 8);
+
+			
+		}
+
+
 
 
 
