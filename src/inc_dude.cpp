@@ -184,8 +184,8 @@ class ROS_handler
 
 //			image2save_Inc = grad.clone();
 
-//			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
-			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
+			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
+//			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
 			grad.copyTo(cv_ptr->image);////most important
 //			image2save_Inc.copyTo(cv_ptr->image);////most important
 			
