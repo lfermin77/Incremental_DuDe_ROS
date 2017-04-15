@@ -309,6 +309,7 @@ Stable_graph Incremental_Decomposer::decompose_image(cv::Mat image_cleaned, floa
 	
 	Stable.diagonal_centroid.clear();
 	Stable.diagonal_connections.clear();
+	//*
 	for(int i=0; i < joint_centroids.size(); i++){	
 		for(int j=0; j < i; j++){
 			int connected;
@@ -430,6 +431,7 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 	std::map < int , std::vector<cv::Point>   > region_contour;
 	std::map < int , std::set<int>   > connections;
 	
+//	cv::flip(Tag_image,Tag_image,0);
 	
 	
 	for (int i=window_size;i < Tag_image.size().width- window_size ;i++){
@@ -478,7 +480,7 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 
 	Stable.diagonal_connections.clear();
 	Stable.diagonal_centroid.clear();
-
+/*
 	for(std::map < std::set<int> , std::vector<cv::Point>   > ::iterator map_iter =points_in_edge.begin(); map_iter !=points_in_edge.end(); map_iter ++){
 		std::set<int> current_edge = map_iter->first;
 		cv::Point centroid_acum(0,0);
@@ -496,13 +498,13 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 		connections[ *(current_edge.rbegin())].insert(*(current_edge.begin()) );
 		
 	}
-
+	//*/
 
 	Stable.region_frontier.clear();
 	Stable.center_of_frontier.clear();
 
 	std::cerr << "frontier_points "<< frontier_points.size() << std::endl;
-	//*
+	/*
 	for(std::map < std::set<int> , std::vector<cv::Point>   > ::iterator map_iter =frontier_points.begin(); map_iter !=frontier_points.end(); map_iter ++){
 		std::set<int> current_edge = map_iter->first;
 		int current_frontier =*(current_edge.rbegin());
@@ -521,11 +523,7 @@ void Incremental_Decomposer::frontiers_in_map(cv::Mat  Tag_image, cv::Mat  origi
 			Stable.center_of_frontier.push_back(centroid_acum);
 		}
 		
-	}
-
-
-
-	
+	}	
 	//*/
 	
 

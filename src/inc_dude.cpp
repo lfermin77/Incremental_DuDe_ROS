@@ -24,6 +24,11 @@ class ROS_handler
 	image_transport::Subscriber image_sub_;
 	image_transport::Publisher image_pub_;	
 	cv_bridge::CvImagePtr cv_ptr;
+	
+	image_transport::ImageTransport it_color;
+	image_transport::Subscriber image_sub_color;
+	image_transport::Publisher image_pub_color;	
+	cv_bridge::CvImagePtr cv_ptr_color;
 		
 	std::string mapname_;
 	ros::Subscriber map_sub_;	
@@ -43,7 +48,7 @@ class ROS_handler
 
 	
 	public:
-		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname),  it_(n), Decomp_threshold_(threshold)
+		ROS_handler(const std::string& mapname, float threshold) : mapname_(mapname),  it_(n), Decomp_threshold_(threshold), it_color(n)
 		{
 			ROS_INFO("Waiting for the map");
 			map_sub_ = n.subscribe("map", 2, &ROS_handler::mapCallback, this); //mapname_ to include different name
@@ -52,9 +57,14 @@ class ROS_handler
 
 			image_pub_ = it_.advertise("/tagged_image", 1);			
 			cv_ptr.reset (new cv_bridge::CvImage);
-//			cv_ptr->encoding = "mono8";
-			cv_ptr->encoding = "bgr8";
-						
+			cv_ptr->encoding = "mono8";
+//			cv_ptr->encoding = "bgr8";
+			
+			image_pub_color = it_.advertise("/tagged_image_color", 1);			
+			cv_ptr_color.reset (new cv_bridge::CvImage);
+//			cv_ptr_color->encoding = "mono8";
+			cv_ptr_color->encoding = "bgr8";
+			
 			
 			cv::Vec3b black(208, 208, 208);
 			colormap.push_back(black);
@@ -175,9 +185,11 @@ class ROS_handler
 //			image2save_Inc = grad.clone();
 
 //			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_32FC1;			grad.convertTo(grad, CV_32F);
-//			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
-//			grad.copyTo(cv_ptr->image);////most important
-			image2save_Inc.copyTo(cv_ptr->image);////most important
+			cv_ptr->encoding = sensor_msgs::image_encodings::TYPE_8UC1;			grad.convertTo(grad, CV_8UC1);
+			grad.copyTo(cv_ptr->image);////most important
+//			image2save_Inc.copyTo(cv_ptr->image);////most important
+			
+			image2save_Inc.copyTo(cv_ptr_color->image);////most important
 
 			end_process = getTime();	drawPublish_time = end_process - begin_process;
 			whole_time = end_process - begin_whole;
@@ -289,6 +301,7 @@ class ROS_handler
 ////////////////////////////		
 		void publish_Image(){
 			image_pub_.publish(cv_ptr->toImageMsg());
+			image_pub_color.publish(cv_ptr_color->toImageMsg());
 		}
 
 
