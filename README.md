@@ -1,7 +1,7 @@
 # Incremental Contour Based Segmentation #
 
 Implementation of the Incremental Contour-Based Topological Segmentation  in structured or unstructured environments.
-We transform the occupancy grid into a set of polygons, then we use the function  [Dual Space Decomposition](http://masc.cs.gmu.edu/wiki/Dude2D) from to segment them. The incremental version only decompose the Differences in the Maps
+We transform the occupancy grid into a set of polygons, then we use the function  [Dual Space Decomposition](http://masc.cs.gmu.edu/wiki/Dude2D) to segment them. The incremental version only decompose the Differences in the Maps
 
 
 
